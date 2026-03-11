@@ -38,33 +38,65 @@ export async function POST(request: Request) {
       </Response>
     `;
 
-        // Initiate calls in parallel
-        const callPromises = phoneNumbers.map((number: string) => {
-            return client.calls.create({
-                twiml: twiml,
-                to: number,
-                from: twilioPhoneNumber,
-            });
+        const smsBody = `🚨 *AshaLink EMERGENCY* 🚨\nYour loved one has pressed the SOS button. They need immediate assistance! Please contact them right away.`;
+
+        // Ensure no single Twilio error crashes the entire request
+        const createCall = async (number: string) => {
+            try {
+                return await client.calls.create({
+                    twiml: twiml,
+                    to: number,
+                    from: twilioPhoneNumber,
+                });
+            } catch (error: any) {
+                console.error(`Failed to call ${number}:`, error.message);
+                throw error;
+            }
+        };
+
+        const createSMS = async (number: string) => {
+            try {
+                return await client.messages.create({
+                    body: smsBody,
+                    to: number,
+                    from: twilioPhoneNumber,
+                });
+            } catch (error: any) {
+                console.error(`Failed to SMS ${number}:`, error.message);
+                throw error;
+            }
+        };
+
+        // Initiate calls and SMS in parallel
+        const promises: Promise<any>[] = [];
+
+        phoneNumbers.forEach((number: string) => {
+            promises.push(createCall(number));
+            promises.push(createSMS(number));
         });
 
-        const results = await Promise.allSettled(callPromises);
+        // Add a 8 second timeout to prevent Vercel connection reset
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Twilio API Timeout')), 8000)
+        );
 
-        const successfulCalls = results.filter((r) => r.status === 'fulfilled');
-        const failedCalls = results.filter((r) => r.status === 'rejected');
+        const results = await Promise.race([
+            Promise.allSettled(promises),
+            timeoutPromise
+        ]) as PromiseSettledResult<any>[];
 
-        if (failedCalls.length > 0) {
-            console.error('Some calls failed:', failedCalls);
-        }
+        const successfulActions = results.filter((r) => r.status === 'fulfilled');
+        const failedActions = results.filter((r) => r.status === 'rejected');
 
-        if (successfulCalls.length === 0 && failedCalls.length > 0) {
-            const firstError = (failedCalls[0] as PromiseRejectedResult).reason;
-            throw new Error(`All calls failed. First error: ${firstError.message || firstError}`);
+        if (successfulActions.length === 0 && failedActions.length > 0) {
+            const firstError = (failedActions[0] as PromiseRejectedResult).reason;
+            throw new Error(`All SOS actions failed. First error: ${firstError.message || firstError}`);
         }
 
         return NextResponse.json({
             success: true,
-            message: `Initiated ${successfulCalls.length} calls`,
-            failures: failedCalls.length
+            message: `Initiated ${successfulActions.length} SOS actions successfully. ${failedActions.length} failed (likely due to trial account unverified numbers).`,
+            failures: failedActions.length
         });
 
     } catch (error: any) {

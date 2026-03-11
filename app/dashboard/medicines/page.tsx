@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Pill, Plus, Trash2, Edit, Camera, Clock, MessageCircle, X, AlertTriangle, Send, Bell, BellOff } from 'lucide-react';
+import { Pill, Plus, Trash2, Edit, Camera, Clock, MessageCircle, X, AlertTriangle, Send, Bell, BellOff, Mic, MicOff } from 'lucide-react';
 
 /**
  * /dashboard/medicines — Medicine Management Page
@@ -81,6 +81,10 @@ export default function MedicinesPage() {
 
     // Reminders state
     const [remindersEnabled, setRemindersEnabled] = useState<Record<string, boolean>>({});
+
+    // Voice input state
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef<any>(null);
 
     // ─── Load from localStorage on mount ─────────────────────────────
     useEffect(() => {
@@ -285,6 +289,86 @@ export default function MedicinesPage() {
                 }
             }, delay);
         });
+    };
+
+    // ─── Voice Input (MediaRecorder + Groq Whisper API) ──────────────
+
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const [isTranscribing, setIsTranscribing] = useState(false);
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                audioChunksRef.current = [];
+
+                // Stop all microphone tracks to release the mic
+                stream.getTracks().forEach(track => track.stop());
+
+                await transcribeAudio(audioBlob);
+            };
+
+            mediaRecorder.start();
+            setIsListening(true);
+        } catch (error) {
+            console.error('Microphone access denied or error:', error);
+            alert('Could not access microphone. Please check your browser permissions.');
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isListening) {
+            mediaRecorderRef.current.stop();
+            setIsListening(false);
+        }
+    };
+
+    const transcribeAudio = async (audioBlob: Blob) => {
+        setIsTranscribing(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', audioBlob);
+
+            const response = await fetch('/api/transcribe', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Transcription failed');
+            }
+
+            const data = await response.json();
+            if (data.text) {
+                setRagQuery(data.text);
+            }
+        } catch (error: any) {
+            console.error('Transcription error:', error);
+            alert(`Transcription failed: ${error.message}`);
+        } finally {
+            setIsTranscribing(false);
+        }
+    };
+
+    const toggleListening = () => {
+        if (isListening) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
     };
 
     // ─── Render ──────────────────────────────────────────────────────
@@ -552,17 +636,50 @@ export default function MedicinesPage() {
                                     value={ragQuery}
                                     onChange={e => setRagQuery(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && handleAskQuestion()}
-                                    placeholder="e.g., What do I take in the morning?"
-                                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all text-sm"
+                                    disabled={isTranscribing}
+                                    placeholder={
+                                        isTranscribing ? '⏳ Transcribing your voice...' :
+                                            isListening ? '🎤 Listening... speak now' :
+                                                'e.g., What do I take in the morning?'
+                                    }
+                                    className={`flex-1 px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all text-sm ${isTranscribing ? 'bg-gray-50 border-gray-300 text-gray-500 cursor-not-allowed' :
+                                            isListening ? 'border-red-400 bg-red-50' :
+                                                'border-gray-300'
+                                        }`}
                                 />
                                 <button
+                                    onClick={toggleListening}
+                                    disabled={isTranscribing}
+                                    className={`p-2.5 rounded-xl transition-all ${isTranscribing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' :
+                                            isListening ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse shadow-lg shadow-red-200' :
+                                                'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                                        }`}
+                                    title={isListening ? 'Stop listening' : 'Speak your question'}
+                                >
+                                    {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+                                </button>
+                                <button
                                     onClick={handleAskQuestion}
-                                    disabled={isAsking || !ragQuery.trim()}
+                                    disabled={isAsking || isTranscribing || !ragQuery.trim()}
                                     className="p-2.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-xl transition-all"
                                 >
                                     <Send size={18} />
                                 </button>
                             </div>
+
+                            {isListening && (
+                                <div className="flex items-center gap-2 text-red-600 text-xs font-medium">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                                    Listening... click the mic again when done.
+                                </div>
+                            )}
+
+                            {isTranscribing && (
+                                <div className="flex items-center gap-2 text-blue-600 text-xs font-medium">
+                                    <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                                    Transcribing audio...
+                                </div>
+                            )}
 
                             <div className="flex flex-wrap gap-1.5">
                                 {['What do I take in the morning?', 'Any evening medicines?', 'Tell me about my medicines'].map(suggestion => (

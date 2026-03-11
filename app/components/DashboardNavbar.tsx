@@ -2,33 +2,28 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, HeartPulse, Smile, BellDot, Pill } from 'lucide-react';
+import { Home, Users, HeartPulse, Smile, BellDot, Pill, ShieldCheck } from 'lucide-react';
 
 const navItems = [
   {
     label: 'Home',
     href: '/dashboard',
-    icon: Home // Represents safety and the central hub
+    icon: Home
   },
   {
-    label: 'My Community',
+    label: 'Safety Center',
     href: '/dashboard/community',
-    icon: Users // Focuses on friendship and belonging
-  },
-  {
-    label: 'Get Help',
-    href: '/dashboard/sos',
-    icon: HeartPulse // "Get Help" is more comforting and clear than "SOS"
+    icon: ShieldCheck // Changed to ShieldCheck for Safety Center
   },
   {
     label: 'My Companion',
     href: '/dashboard/avatar',
-    icon: Smile // Refers to the AI as a friend rather than a "technical" avatar
+    icon: Smile
   },
   {
     label: 'Medicines',
     href: '/dashboard/medicines',
-    icon: Pill // Medicine management section
+    icon: Pill
   },
 ];
 

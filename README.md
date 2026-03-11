@@ -25,14 +25,12 @@ An intelligent elderly care companion built with **Next.js 16**, combining **AI 
 - **RAG Query Interface** — ask questions about your medicines, answered by Groq LLM using *only* your actual medicine data
 - Browser notification reminders for medicine schedules
 
-### 🚨 SOS & Emergency System
-- One-tap SOS button triggers **Twilio voice calls** to all emergency contacts simultaneously
+### 🚨 Safety Center (SOS & Community)
+- **One-tap SOS button** triggers **Twilio voice calls** AND **SMS** to all emergency contacts simultaneously
 - Hindi voice message via Amazon Polly (Aditi voice) built into Twilio TwiML
 - Siren sound generator (Web Audio API)
-- GPS location sharing via WhatsApp
+- **Instant Location Sharing** — SMS your live GPS map link to contacts instantly
 - Add/remove emergency contacts (persisted in localStorage)
-
-### 👥 Community — Know Your Neighbour
 - **Real neighbours** — add/remove neighbours stored in localStorage
 - **Help request types** — Groceries, Medical, Companionship, Emergency (color-coded badges)
 - **Verified volunteers** — signup with skills (First Aid, Cooking, Driving, etc.), shown as green dots on map
@@ -41,6 +39,8 @@ An intelligent elderly care companion built with **Next.js 16**, combining **AI 
   - A volunteer accepts a help request
   - An emergency help request goes unanswered
   - Mood drops or inactivity is detected
+
+
 
 ### 📋 Alerts & Notifications
 - Color-coded alert cards (Critical / Warning / Info / Resolved)
@@ -154,8 +154,7 @@ app/
 │   ├── page.tsx                # Electricity monitoring dashboard
 │   ├── avatar/page.tsx         # AI companion + sentiment
 │   ├── medicines/page.tsx      # Medicine management + RAG
-│   ├── community/page.tsx      # Neighbour map
-│   ├── sos/page.tsx            # Emergency SOS
+│   ├── community/page.tsx      # Unified Safety Center (SOS + Map)
 │   └── alerts/page.tsx         # Notifications
 └── page.tsx                    # Landing page
 ```
