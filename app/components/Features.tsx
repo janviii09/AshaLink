@@ -88,9 +88,9 @@ const Features = () => {
   ];
 
   return (
-    <section id="features" className="py-24 bg-gradient-to-b from-white to-blue-50 relative overflow-hidden scroll-mt-16">
-      <div className="absolute top-0 left-0 w-full h-20 bg-gradient-to-b from-blue-50 to-transparent" />
-      
+    <section id="features" className="py-24 bg-gradient-to-b from-white to-orange-50 relative overflow-hidden scroll-mt-16">
+      <div className="absolute top-0 left-0 w-full h-20 bg-gradient-to-b from-orange-50 to-transparent" />
+
       <div className="container mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -132,17 +132,17 @@ const Features = () => {
                     </svg>
                   </motion.div>
                 </div>
-                
+
                 <h3 className="text-2xl font-bold text-white mb-4">
                   {feature.title}
                 </h3>
                 <p className="text-white/90 mb-6">
                   {feature.description}
                 </p>
-                
+
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
-                  animate={{ 
+                  animate={{
                     height: hoveredFeature === feature.id ? 'auto' : 0,
                     opacity: hoveredFeature === feature.id ? 1 : 0
                   }}
@@ -168,7 +168,7 @@ const Features = () => {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ delay: 0.6 }}
-          className="mt-20 bg-white rounded-3xl p-8 shadow-xl border border-blue-100"
+          className="mt-20 bg-white rounded-3xl p-8 shadow-xl border border-orange-100"
         >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -176,31 +176,31 @@ const Features = () => {
                 See It In Action
               </h3>
               <p className="text-gray-600 mb-8">
-                Our AI companion provides natural conversations, remembers preferences, 
+                Our AI companion provides natural conversations, remembers preferences,
                 and offers emotional support - all while monitoring daily patterns discreetly.
               </p>
               <ul className="space-y-4">
                 <li className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full" />
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full" />
                   </div>
                   <span className="text-gray-700">Real-time anomaly detection</span>
                 </li>
                 <li className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full" />
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full" />
                   </div>
                   <span className="text-gray-700">Instant family notifications</span>
                 </li>
                 <li className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full" />
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full" />
                   </div>
                   <span className="text-gray-700">Emergency response coordination</span>
                 </li>
               </ul>
             </div>
-            
+
             <div className="relative">
               {/* Mockup Phone */}
               <div className="relative mx-auto w-64 h-[500px] bg-gray-800 rounded-[2rem] p-4 shadow-2xl">
@@ -208,9 +208,9 @@ const Features = () => {
                 <div className="h-full bg-gradient-to-b from-blue-400 to-blue-600 rounded-2xl p-4">
                   <div className="text-center text-white mb-6">
                     <div className="text-sm opacity-80">AI Companion</div>
-                    <div className="text-xl font-bold">ApkaSaathi</div>
+                    <div className="text-xl font-bold">AshaLink</div>
                   </div>
-                  
+
                   {/* Animated Chat */}
                   <div className="space-y-4">
                     <motion.div

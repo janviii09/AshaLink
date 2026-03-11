@@ -8,11 +8,11 @@ interface CallToActionProps {
 
 const CallToAction = ({ onGetStartedClick }: CallToActionProps) => {
   return (
-    <section id="pricing" className="py-24 bg-gradient-to-br from-blue-600 via-blue-500 to-teal-500 relative overflow-hidden scroll-mt-16">
+    <section id="pricing" className="py-24 bg-gradient-to-br from-orange-600 via-orange-500 to-rose-500 relative overflow-hidden scroll-mt-16">
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-0 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-teal-400/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-rose-400/20 rounded-full blur-3xl" />
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
       </div>
 
@@ -27,7 +27,7 @@ const CallToAction = ({ onGetStartedClick }: CallToActionProps) => {
             Start Caring Smarter Today
           </h2>
           <p className="text-xl text-blue-100 mb-12 max-w-2xl mx-auto">
-            Join thousands of families who have found peace of mind with ApkaSaathi. 
+            Join thousands of families who have found peace of mind with AshaLink.
             Give your loved ones the care and companionship they deserve.
           </p>
 
@@ -36,11 +36,11 @@ const CallToAction = ({ onGetStartedClick }: CallToActionProps) => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onGetStartedClick}
-              className="bg-white text-blue-600 px-10 py-4 rounded-full font-bold text-lg shadow-2xl hover:shadow-3xl transition-all duration-300"
+              className="bg-white text-orange-600 px-10 py-4 rounded-full font-bold text-lg shadow-2xl hover:shadow-3xl transition-all duration-300"
             >
               Get Started Free
             </motion.button>
-            
+
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -66,7 +66,7 @@ const CallToAction = ({ onGetStartedClick }: CallToActionProps) => {
             ].map((stat, index) => (
               <div key={index} className="text-center">
                 <div className="text-4xl font-bold text-white mb-2">{stat.value}</div>
-                <div className="text-blue-100">{stat.label}</div>
+                <div className="text-orange-100">{stat.label}</div>
               </div>
             ))}
           </motion.div>

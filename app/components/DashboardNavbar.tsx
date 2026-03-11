@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, HeartPulse, Smile, BellDot } from 'lucide-react';
+import { Home, Users, HeartPulse, Smile, BellDot, Pill } from 'lucide-react';
 
 const navItems = [
   {
@@ -25,6 +25,11 @@ const navItems = [
     href: '/dashboard/avatar',
     icon: Smile // Refers to the AI as a friend rather than a "technical" avatar
   },
+  {
+    label: 'Medicines',
+    href: '/dashboard/medicines',
+    icon: Pill // Medicine management section
+  },
 ];
 
 export default function DashboardNavbar() {
@@ -35,10 +40,10 @@ export default function DashboardNavbar() {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           <Link href="/dashboard" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-teal-400 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-xl">A</span>
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-rose-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
+              <span className="text-white font-bold text-xl">Å</span>
             </div>
-            <span className="text-xl font-bold text-gray-800">ApkaSaathi</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-orange-600 to-rose-600 bg-clip-text text-transparent">AshaLink</span>
           </Link>
 
           <div className="flex items-center gap-1">
@@ -49,8 +54,8 @@ export default function DashboardNavbar() {
                   key={href}
                   href={href}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${isActive
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                    ? 'bg-orange-50 text-orange-600'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
                     }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -62,7 +67,7 @@ export default function DashboardNavbar() {
 
           <Link
             href="/"
-            className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors"
+            className="text-gray-500 hover:text-orange-600 text-sm font-medium transition-colors"
           >
             Back to Home
           </Link>

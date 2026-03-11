@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const elevenLabsFormData = new FormData();
     elevenLabsFormData.append('name', voiceName);
     elevenLabsFormData.append('files', audioFile, 'sample.wav');
-    elevenLabsFormData.append('description', 'Created via Apka Saathi frontend');
+    elevenLabsFormData.append('description', 'Created via AshaLink frontend');
 
     const response = await fetch('https://api.elevenlabs.io/v1/voices/add', {
       method: 'POST',

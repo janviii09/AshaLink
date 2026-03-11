@@ -19,15 +19,15 @@ const Navbar = ({ onGetStartedClick }: NavbarProps) => {
   ];
 
   return (
-    <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b border-blue-100">
+    <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b border-orange-100">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-teal-400 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-xl">A</span>
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-rose-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
+              <span className="text-white font-bold text-xl">Å</span>
             </div>
-            <span className="text-2xl font-bold text-gray-800">ApkaSaathi</span>
+            <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-rose-600 bg-clip-text text-transparent">AshaLink</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -36,14 +36,14 @@ const Navbar = ({ onGetStartedClick }: NavbarProps) => {
               <a
                 key={item.label}
                 href={item.href}
-                className="text-gray-600 hover:text-blue-600 font-medium transition-colors"
+                className="text-gray-600 hover:text-orange-600 font-medium transition-colors"
               >
                 {item.label}
               </a>
             ))}
             <button
               onClick={onGetStartedClick}
-              className="bg-blue-500 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-600 transition-all transform hover:scale-105"
+              className="bg-gradient-to-r from-orange-500 to-rose-500 text-white px-6 py-2 rounded-full font-semibold hover:from-orange-600 hover:to-rose-600 transition-all transform hover:scale-105 shadow-md"
             >
               Get Started
             </button>
@@ -78,7 +78,7 @@ const Navbar = ({ onGetStartedClick }: NavbarProps) => {
                   <a
                     key={item.label}
                     href={item.href}
-                    className="block text-gray-600 hover:text-blue-600 font-medium py-2"
+                    className="block text-gray-600 hover:text-orange-600 font-medium py-2"
                     onClick={() => setIsOpen(false)}
                   >
                     {item.label}
@@ -89,7 +89,7 @@ const Navbar = ({ onGetStartedClick }: NavbarProps) => {
                     onGetStartedClick?.();
                     setIsOpen(false);
                   }}
-                  className="w-full bg-blue-500 text-white px-6 py-3 rounded-full font-semibold hover:bg-blue-600 transition-all"
+                  className="w-full bg-gradient-to-r from-orange-500 to-rose-500 text-white px-6 py-3 rounded-full font-semibold hover:from-orange-600 hover:to-rose-600 transition-all shadow-md"
                 >
                   Get Started
                 </button>

@@ -61,20 +61,20 @@ const CompetitiveEdge = () => {
             Our Competitive Edge
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            What makes ApkaSaathi different from traditional elderly care solutions
+            What makes AshaLink different from traditional elderly care solutions
           </p>
         </motion.div>
 
         {/* Tabs */}
         <div className="flex justify-center mb-12">
-          <div className="inline-flex rounded-full bg-blue-100 p-2">
+          <div className="inline-flex rounded-full bg-orange-100 p-2">
             {Object.keys(edges).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 ${activeTab === tab
-                    ? 'bg-white text-blue-600 shadow-lg'
-                    : 'text-blue-700 hover:bg-blue-50'
+                  ? 'bg-white text-orange-600 shadow-lg'
+                  : 'text-orange-700 hover:bg-orange-50'
                   }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -91,7 +91,7 @@ const CompetitiveEdge = () => {
           transition={{ duration: 0.5 }}
           className="max-w-4xl mx-auto"
         >
-          <div className="bg-gradient-to-br from-blue-50 to-teal-50 rounded-3xl p-8 md:p-12 shadow-xl border border-blue-100">
+          <div className="bg-gradient-to-br from-orange-50 to-rose-50 rounded-3xl p-8 md:p-12 shadow-xl border border-orange-100">
             <div className="flex items-start gap-6">
               <div className="text-8xl">{edges[activeTab as keyof typeof edges].icon}</div>
               <div>
@@ -110,7 +110,7 @@ const CompetitiveEdge = () => {
                       transition={{ delay: index * 0.1 }}
                       className="flex items-center gap-3"
                     >
-                      <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                      <div className="w-2 h-2 bg-orange-500 rounded-full" />
                       <span className="text-gray-700">{feature}</span>
                     </motion.div>
                   ))}
@@ -134,10 +134,10 @@ const CompetitiveEdge = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-blue-50">
+                <tr className="bg-orange-50">
                   <th className="p-4 text-left rounded-l-2xl">Feature</th>
                   <th className="p-4 text-center">Traditional Solutions</th>
-                  <th className="p-4 text-center bg-blue-100 rounded-r-2xl">ApkaSaathi</th>
+                  <th className="p-4 text-center bg-orange-100 rounded-r-2xl">AshaLink</th>
                 </tr>
               </thead>
               <tbody>
@@ -149,10 +149,10 @@ const CompetitiveEdge = () => {
                   ['Community', 'None', 'Integrated'],
                   ['Ease of Use', 'Complex', 'Simple']
                 ].map(([feature, traditional, ours], index) => (
-                  <tr key={index} className="border-b border-blue-100">
+                  <tr key={index} className="border-b border-orange-100">
                     <td className="p-4 font-semibold">{feature}</td>
                     <td className="p-4 text-center text-gray-600">{traditional}</td>
-                    <td className="p-4 text-center font-semibold text-blue-600 bg-blue-50">
+                    <td className="p-4 text-center font-semibold text-orange-600 bg-orange-50">
                       {ours}
                     </td>
                   </tr>

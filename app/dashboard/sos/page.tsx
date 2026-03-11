@@ -198,7 +198,7 @@ export default function SosPage() {
           {contacts.map((contact) => (
             <div key={contact.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold shrink-0">
+                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold shrink-0">
                   {contact.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
@@ -224,7 +224,7 @@ export default function SosPage() {
           {/* Add Contact Button */}
           <button
             onClick={() => setIsAddContactModalOpen(true)}
-            className="border-2 border-dashed border-gray-300 rounded-xl p-4 flex items-center justify-center gap-2 text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all min-h-[88px]"
+            className="border-2 border-dashed border-gray-300 rounded-xl p-4 flex items-center justify-center gap-2 text-gray-500 hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50 transition-all min-h-[88px]"
           >
             <Plus className="w-5 h-5" />
             <span>Add New Contact</span>
@@ -321,7 +321,7 @@ export default function SosPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
                   placeholder="e.g. Dr. Smith"
                   value={newContact.name}
                   onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
@@ -331,7 +331,7 @@ export default function SosPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Relationship (Optional)</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
                   placeholder="e.g. Doctor"
                   value={newContact.relationship}
                   onChange={(e) => setNewContact({ ...newContact, relationship: e.target.value })}
@@ -341,7 +341,7 @@ export default function SosPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                 <input
                   type="tel"
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
                   placeholder="e.g. +91 1234567890"
                   value={newContact.phone}
                   onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
@@ -350,7 +350,7 @@ export default function SosPage() {
 
               <button
                 onClick={handleAddContact}
-                className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors mt-4"
+                className="w-full bg-gradient-to-r from-orange-500 to-rose-500 text-white py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-rose-600 transition-colors mt-4"
               >
                 Save Contact
               </button>

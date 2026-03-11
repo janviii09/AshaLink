@@ -5,7 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'ApkaSaathi - AI-Powered Elderly Care Platform',
+  title: 'AshaLink - AI-Powered Elderly Care Platform',
   description: 'Monitor electricity usage to ensure elderly safety with AI companionship, community support, and emergency SOS.',
 };
 

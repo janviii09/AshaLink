@@ -17,21 +17,21 @@ const Hero = ({ onGetStartedClick }: HeroProps) => {
       title: "Caring for Elders, Powered by AI",
       subtitle: "Monitoring electricity usage to ensure their safety and well-being",
       image: "https://images.unsplash.com/photo-1581579431539-d2871c7d673c?auto=format&fit=crop&w=1920",
-      gradient: "linear-gradient(to right, rgba(0,132,255,0.9), rgba(78,205,196,0.7))"
+      gradient: "linear-gradient(to right, rgba(234,88,12,0.85), rgba(244,63,94,0.7))"
     },
     {
       id: 2,
       title: "Real-time Elderly Monitoring",
       subtitle: "Smart technology for peace of mind",
       image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1920",
-      gradient: "linear-gradient(to right, rgba(0,132,255,0.8), rgba(102,181,255,0.6))"
+      gradient: "linear-gradient(to right, rgba(234,88,12,0.8), rgba(251,146,60,0.6))"
     },
     {
       id: 3,
       title: "AI Companion & Community",
       subtitle: "Because everyone deserves companionship",
       image: "https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1920",
-      gradient: "linear-gradient(to right, rgba(0,132,255,0.7), rgba(51,157,255,0.5))"
+      gradient: "linear-gradient(to right, rgba(244,63,94,0.75), rgba(234,88,12,0.55))"
     }
   ];
 
@@ -82,7 +82,7 @@ const Hero = ({ onGetStartedClick }: HeroProps) => {
                     >
                       <button
                         onClick={onGetStartedClick}
-                        className="bg-white text-blue-600 px-8 py-3 rounded-full font-semibold text-lg hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 shadow-xl"
+                        className="bg-white text-orange-600 px-8 py-3 rounded-full font-semibold text-lg hover:bg-orange-50 transition-all duration-300 transform hover:scale-105 shadow-xl"
                       >
                         Get Started
                       </button>

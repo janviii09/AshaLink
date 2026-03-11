@@ -135,9 +135,9 @@ export default function DashboardPage() {
       {/* <h1 className="text-2xl font-bold text-gray-800 mb-2">Dashboard</h1> */}
 
       {/* Explanation of data and graph (in points) */}
-      <div className="mb-8 p-5 bg-blue-50 border border-blue-100 rounded-2xl">
+      <div className="mb-8 p-5 bg-orange-50 border border-orange-100 rounded-2xl">
         <div className="flex items-center gap-2 mb-4">
-          <Info className="w-5 h-5 text-blue-600" />
+          <Info className="w-5 h-5 text-orange-600" />
           <h2 className="text-lg font-semibold text-gray-800">Graph Insights</h2>
         </div>
         <ul className="space-y-2 list-disc list-inside text-gray-700">
@@ -151,7 +151,7 @@ export default function DashboardPage() {
         {/* Electricity usage graph – test_data.csv, red dots for out-of-range */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-            <Zap className="w-5 h-5 text-blue-500" />
+            <Zap className="w-5 h-5 text-orange-500" />
             <h2 className="text-lg font-semibold text-gray-800">Electricity Derived Insights</h2>
           </div>
           <div className="p-6">
@@ -162,7 +162,7 @@ export default function DashboardPage() {
               <>
                 <div className="flex flex-wrap gap-4 mb-4 p-3 bg-gray-50 rounded-xl text-sm">
                   <span className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-blue-500" /> Usage (kWh)
+                    <span className="w-3 h-3 rounded-full bg-orange-500" /> Usage (kWh)
                   </span>
                   <span className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-red-500" /> Alert (abnormality)
@@ -173,8 +173,8 @@ export default function DashboardPage() {
                     <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="usageGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.4} />
-                          <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                          <stop offset="0%" stopColor="#f97316" stopOpacity={0.4} />
+                          <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -194,7 +194,7 @@ export default function DashboardPage() {
                       <Area
                         type="monotone"
                         dataKey="usage"
-                        stroke="#3b82f6"
+                        stroke="#f97316"
                         strokeWidth={2}
                         fill="url(#usageGradient)"
                         dot={(props) => {
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                           }
                           return null;
                         }}
-                        activeDot={{ r: 5, stroke: '#1e40af', strokeWidth: 2 }}
+                        activeDot={{ r: 5, stroke: '#c2410c', strokeWidth: 2 }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
