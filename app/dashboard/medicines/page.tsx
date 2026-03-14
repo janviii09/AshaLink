@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Pill, Plus, Trash2, Edit, Camera, Clock, MessageCircle, X, AlertTriangle, Send, Bell, BellOff, Mic, MicOff } from 'lucide-react';
+import { Pill, Plus, Trash2, Edit, Camera, Clock, MessageCircle, X, AlertTriangle, Send, Bell, BellOff, Mic, MicOff, Cpu } from 'lucide-react';
+import Tesseract from 'tesseract.js';
 
 /**
  * /dashboard/medicines — Medicine Management Page
@@ -73,6 +74,16 @@ export default function MedicinesPage() {
     const [scanResult, setScanResult] = useState<ScanResult | null>(null);
     const [isScanning, setIsScanning] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Local OCR state (Tesseract.js)
+    const [isLocalScanning, setIsLocalScanning] = useState(false);
+    const [localOcrProgress, setLocalOcrProgress] = useState(0);
+    const [localOcrResult, setLocalOcrResult] = useState<{
+        rawText: string;
+        medicineName: string | null;
+        dosage: string | null;
+        manufacturer: string | null;
+    } | null>(null);
 
     // RAG chat state
     const [ragQuery, setRagQuery] = useState('');
@@ -195,6 +206,55 @@ export default function MedicinesPage() {
             alert('Failed to scan medicine. Please try again.');
         } finally {
             setIsScanning(false);
+        }
+    };
+
+    // ─── Local OCR with Tesseract.js ─────────────────────────────────
+    /**
+     * Tesseract.js processes images entirely in the browser using WebAssembly.
+     * On first use, it downloads a ~15MB trained OCR model from a CDN.
+     * The model is cached by the browser for subsequent use.
+     * 
+     * After extracting raw text, we use regex patterns to identify:
+     * - Medicine name (largest/first prominent text)
+     * - Dosage (patterns like 500mg, 10ml, 250mcg)
+     * - Manufacturer (text after "Mfg by" or "Manufactured by")
+     */
+    const handleLocalOCR = async () => {
+        if (!scanImage) return;
+
+        setIsLocalScanning(true);
+        setLocalOcrProgress(0);
+        setLocalOcrResult(null);
+
+        try {
+            const result = await Tesseract.recognize(scanImage, 'eng', {
+                logger: (info) => {
+                    if (info.status === 'recognizing text') {
+                        setLocalOcrProgress(Math.round(info.progress * 100));
+                    }
+                },
+            });
+
+            const rawText = result.data.text.trim();
+
+            // Parse extracted text for medicine-specific information
+            const dosageMatch = rawText.match(/(\d+\.?\d*)\s*(mg|ml|mcg|g|IU|%)/i);
+            const dosage = dosageMatch ? `${dosageMatch[1]} ${dosageMatch[2].toUpperCase()}` : null;
+
+            const mfgMatch = rawText.match(/(?:mfg|manufactured|marketed)\s*(?:by|:)?\s*(.+)/i);
+            const manufacturer = mfgMatch ? mfgMatch[1].trim().split('\n')[0] : null;
+
+            // Try to extract medicine name (typically the most prominent text)
+            const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+            const medicineName = lines.length > 0 ? lines[0] : null;
+
+            setLocalOcrResult({ rawText, medicineName, dosage, manufacturer });
+        } catch (error) {
+            console.error('Tesseract OCR error:', error);
+            alert('Local OCR failed. Please try again or use the Cloud AI Scanner.');
+        } finally {
+            setIsLocalScanning(false);
         }
     };
 
@@ -598,13 +658,40 @@ export default function MedicinesPage() {
                             />
 
                             {scanImage && (
-                                <button
-                                    onClick={handleScanMedicine}
-                                    disabled={isScanning}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-2.5 rounded-xl shadow-md transition-all"
-                                >
-                                    {isScanning ? 'Identifying...' : 'Identify Medicine'}
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleScanMedicine}
+                                        disabled={isScanning || isLocalScanning}
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-2.5 rounded-xl shadow-md transition-all text-sm"
+                                    >
+                                        {isScanning ? 'Identifying...' : '☁️ Cloud AI Scanner'}
+                                    </button>
+                                    <button
+                                        onClick={handleLocalOCR}
+                                        disabled={isScanning || isLocalScanning}
+                                        className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold py-2.5 rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-1.5"
+                                    >
+                                        <Cpu size={14} />
+                                        {isLocalScanning ? `OCR ${localOcrProgress}%` : '🖥️ Local OCR'}
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Local OCR Progress Bar */}
+                            {isLocalScanning && (
+                                <div className="space-y-1">
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div
+                                            className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                                            style={{ width: `${localOcrProgress}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-xs text-gray-500 text-center">
+                                        {localOcrProgress < 30 ? 'Loading Tesseract OCR model...' :
+                                         localOcrProgress < 90 ? 'Processing image with Tesseract.js...' :
+                                         'Extracting text...'}
+                                    </p>
+                                </div>
                             )}
 
                             {scanResult && (
@@ -617,6 +704,30 @@ export default function MedicinesPage() {
                                         <AlertTriangle size={16} className="text-yellow-600 mt-0.5 shrink-0" />
                                         <p className="text-xs text-yellow-800">{scanResult.disclaimer}</p>
                                     </div>
+                                </div>
+                            )}
+
+                            {/* Local OCR Results */}
+                            {localOcrResult && (
+                                <div className="bg-purple-50 rounded-xl p-4 space-y-2 border border-purple-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Cpu size={16} className="text-purple-600" />
+                                        <h4 className="font-bold text-purple-800 text-sm">Local OCR Result (Tesseract.js)</h4>
+                                    </div>
+                                    {localOcrResult.medicineName && (
+                                        <p className="text-sm text-gray-700"><span className="font-medium">Detected Name:</span> {localOcrResult.medicineName}</p>
+                                    )}
+                                    {localOcrResult.dosage && (
+                                        <p className="text-sm text-gray-700"><span className="font-medium">Dosage Found:</span> {localOcrResult.dosage}</p>
+                                    )}
+                                    {localOcrResult.manufacturer && (
+                                        <p className="text-sm text-gray-700"><span className="font-medium">Manufacturer:</span> {localOcrResult.manufacturer}</p>
+                                    )}
+                                    <details className="mt-2">
+                                        <summary className="text-xs text-purple-600 cursor-pointer font-medium">View raw extracted text</summary>
+                                        <pre className="mt-1 text-xs text-gray-600 bg-white p-2 rounded-lg border whitespace-pre-wrap max-h-32 overflow-y-auto">{localOcrResult.rawText || 'No text detected'}</pre>
+                                    </details>
+                                    <p className="text-[10px] text-gray-400 mt-2">Processed entirely in your browser using Tesseract.js WebAssembly — no data sent to any server.</p>
                                 </div>
                             )}
                         </div>

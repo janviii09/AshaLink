@@ -10,17 +10,35 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { Zap, Bell, Info } from 'lucide-react';
+import { Zap, Bell, Info, Brain, ChevronDown, ChevronUp, BarChart3 } from 'lucide-react';
+
+// ─── Types ────────────────────────────────────────────────────────────────
 
 type ChartPoint = {
   timestamp: string;
   label: string;
   usage: number;
   isAnomaly: boolean;
+  zScore?: number;
 };
 
-// Min/max (kWh) for each hour (0–23). Values outside this range are flagged as abnormality.
-const RANGE_BY_HOUR: Record<number, { min: number; max: number }> = {
+type HourlyStats = {
+  mean: number;
+  stdDev: number;
+  count: number;
+  min: number;
+  max: number;
+};
+
+type HistoricalReading = {
+  timestamp: string;
+  hour: number;
+  kWh: number;
+};
+
+// ─── Fallback Ranges (used when < 3 readings exist for an hour) ──────────
+
+const FALLBACK_RANGE_BY_HOUR: Record<number, { min: number; max: number }> = {
   0: { min: 0.05, max: 0.25 },
   1: { min: 0.05, max: 0.25 },
   2: { min: 0.05, max: 0.25 },
@@ -47,17 +65,126 @@ const RANGE_BY_HOUR: Record<number, { min: number; max: number }> = {
   23: { min: 0.1, max: 0.35 },
 };
 
+// ─── Statistical Functions ────────────────────────────────────────────────
+
+/**
+ * Compute mean and standard deviation for a set of values.
+ * Uses Bessel's correction (n-1) for sample standard deviation.
+ */
+function computeMeanStdDev(values: number[]): { mean: number; stdDev: number } {
+  if (values.length === 0) return { mean: 0, stdDev: 0 };
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  if (values.length < 2) return { mean, stdDev: 0 };
+  const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / (values.length - 1);
+  return { mean, stdDev: Math.sqrt(variance) };
+}
+
+/**
+ * Calculate the Z-score: how many standard deviations a value is from the mean.
+ * A |Z-score| > 2 means the value is statistically unusual (~95% confidence).
+ */
+function calculateZScore(value: number, mean: number, stdDev: number): number {
+  if (stdDev === 0) return 0;
+  return (value - mean) / stdDev;
+}
+
+/**
+ * Compute adaptive thresholds for each hour (0–23) from historical data.
+ * Groups all historical readings by hour, then computes mean ± 2σ for each.
+ * Falls back to FALLBACK_RANGE_BY_HOUR when < 3 readings exist for an hour.
+ */
+function computeAdaptiveRanges(
+  history: HistoricalReading[]
+): { ranges: Record<number, HourlyStats>; adaptiveHours: number; fallbackHours: number } {
+  // Group readings by hour
+  const byHour: Record<number, number[]> = {};
+  for (let h = 0; h < 24; h++) byHour[h] = [];
+  for (const r of history) {
+    byHour[r.hour]?.push(r.kWh);
+  }
+
+  const ranges: Record<number, HourlyStats> = {};
+  let adaptiveHours = 0;
+  let fallbackHours = 0;
+
+  for (let h = 0; h < 24; h++) {
+    const values = byHour[h];
+    if (values.length >= 3) {
+      // Enough data → use statistical model
+      const { mean, stdDev } = computeMeanStdDev(values);
+      ranges[h] = {
+        mean,
+        stdDev,
+        count: values.length,
+        min: Math.max(0, mean - 2 * stdDev), // Can't be negative kWh
+        max: mean + 2 * stdDev,
+      };
+      adaptiveHours++;
+    } else {
+      // Insufficient data → fallback to hardcoded
+      const fb = FALLBACK_RANGE_BY_HOUR[h];
+      const fbMean = (fb.min + fb.max) / 2;
+      const fbStdDev = (fb.max - fb.min) / 4; // treat range as ≈ 4σ
+      ranges[h] = {
+        mean: fbMean,
+        stdDev: fbStdDev,
+        count: values.length,
+        min: fb.min,
+        max: fb.max,
+      };
+      fallbackHours++;
+    }
+  }
+
+  return { ranges, adaptiveHours, fallbackHours };
+}
+
+/**
+ * Merge new data points into localStorage history, deduplicating by timestamp.
+ */
+function mergeAndStoreHistory(newReadings: HistoricalReading[]): HistoricalReading[] {
+  let existing: HistoricalReading[] = [];
+  try {
+    const saved = localStorage.getItem('electricity_history');
+    if (saved) existing = JSON.parse(saved);
+  } catch { /* ignore */ }
+
+  // Deduplicate by timestamp
+  const seen = new Set(existing.map((r) => r.timestamp));
+  for (const r of newReadings) {
+    if (!seen.has(r.timestamp)) {
+      existing.push(r);
+      seen.add(r.timestamp);
+    }
+  }
+
+  // Keep only last 30 days of data (720 hourly readings max)
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  existing = existing.filter((r) => new Date(r.timestamp) >= cutoff);
+
+  localStorage.setItem('electricity_history', JSON.stringify(existing));
+  return existing;
+}
+
 function getHourFromTimestamp(timestamp: string): number {
   const match = timestamp.match(/\s+(\d{2}):/);
   return match ? parseInt(match[1], 10) : 0;
 }
 
-function parseTestDataCSV(csvText: string): ChartPoint[] {
+// ─── CSV Parsing ──────────────────────────────────────────────────────────
+
+function parseTestDataCSV(
+  csvText: string,
+  adaptiveRanges: Record<number, HourlyStats>
+): { points: ChartPoint[]; readings: HistoricalReading[] } {
   const lines = csvText.trim().split('\n');
-  const rows = lines[0]?.toLowerCase().includes('timestamp') || lines[0]?.toLowerCase().includes('kwh')
-    ? lines.slice(1)
-    : lines;
+  const rows =
+    lines[0]?.toLowerCase().includes('timestamp') || lines[0]?.toLowerCase().includes('kwh')
+      ? lines.slice(1)
+      : lines;
   const points: ChartPoint[] = [];
+  const readings: HistoricalReading[] = [];
 
   for (const line of rows) {
     const parts = line.split(',').map((s) => s.trim());
@@ -65,9 +192,11 @@ function parseTestDataCSV(csvText: string): ChartPoint[] {
     const timestamp = parts[0];
     const kWh = parseFloat(parts[1]);
     if (Number.isNaN(kWh)) continue;
+
     const hour = getHourFromTimestamp(timestamp);
-    const range = RANGE_BY_HOUR[hour] ?? { min: 0, max: 2 };
-    const isAnomaly = kWh < range.min || kWh > range.max;
+    const stats = adaptiveRanges[hour];
+    const zScore = calculateZScore(kWh, stats.mean, stats.stdDev);
+    const isAnomaly = Math.abs(zScore) > 2; // Flag if Z-score exceeds ±2
 
     const match = timestamp.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -76,18 +205,21 @@ function parseTestDataCSV(csvText: string): ChartPoint[] {
     const hourStr = match ? parseInt(match[4], 10) : 0;
     const label = match ? `${month} ${day} ${hourStr}:00` : timestamp.slice(0, 16);
 
-    points.push({ timestamp, label, usage: kWh, isAnomaly });
+    points.push({ timestamp, label, usage: kWh, isAnomaly, zScore: Math.round(zScore * 100) / 100 });
+    readings.push({ timestamp, hour, kWh });
   }
 
-  return points;
+  return { points, readings };
 }
 
-function computeStats(points: ChartPoint[]) {
+function computeOverallStats(points: ChartPoint[]) {
   if (points.length === 0) return { mean: 0 };
   const values = points.map((p) => p.usage);
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
   return { mean };
 }
+
+// ─── Alert Data ───────────────────────────────────────────────────────────
 
 const severityStyles: Record<string, string> = {
   high: 'bg-red-100 text-red-800 border-red-200',
@@ -103,38 +235,105 @@ const recentAlerts = [
 
 const DATA_URL = '/test_data.csv';
 
+// ─── Main Component ──────────────────────────────────────────────────────
+
 export default function DashboardPage() {
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(true);
+  const [adaptiveInfo, setAdaptiveInfo] = useState<{
+    adaptiveHours: number;
+    fallbackHours: number;
+    ranges: Record<number, HourlyStats>;
+    totalReadings: number;
+  } | null>(null);
+  const [showThresholds, setShowThresholds] = useState(false);
 
   useEffect(() => {
-    fetch(`${DATA_URL}?t=${Date.now()}`)
-      .then((res) => res.ok ? res.text() : Promise.reject(new Error('Failed to load')))
-      .then((text) => setChartData(parseTestDataCSV(text)))
-      .catch(() => setChartData([]))
-      .finally(() => setLoading(false));
+    async function loadData() {
+      try {
+        // Step 1: Load existing history from localStorage
+        let history: HistoricalReading[] = [];
+        try {
+          const saved = localStorage.getItem('electricity_history');
+          if (saved) history = JSON.parse(saved);
+        } catch { /* ignore */ }
+
+        // Step 2: Compute adaptive ranges from ALL historical data
+        const { ranges, adaptiveHours, fallbackHours } = computeAdaptiveRanges(history);
+
+        // Step 3: Fetch new CSV data
+        const res = await fetch(`${DATA_URL}?t=${Date.now()}`);
+        if (!res.ok) throw new Error('Failed to load');
+        const text = await res.text();
+
+        // Step 4: Parse with adaptive thresholds
+        const { points, readings } = parseTestDataCSV(text, ranges);
+
+        // Step 5: Merge new readings into history and re-compute
+        const updatedHistory = mergeAndStoreHistory(readings);
+        const updated = computeAdaptiveRanges(updatedHistory);
+
+        // Step 6: Re-parse with updated ranges (now includes the new data)
+        const { points: finalPoints } = parseTestDataCSV(text, updated.ranges);
+
+        setChartData(finalPoints);
+        setAdaptiveInfo({
+          adaptiveHours: updated.adaptiveHours,
+          fallbackHours: updated.fallbackHours,
+          ranges: updated.ranges,
+          totalReadings: updatedHistory.length,
+        });
+      } catch {
+        setChartData([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
   }, []);
 
-  const stats = useMemo(() => computeStats(chartData), [chartData]);
+  const stats = useMemo(() => computeOverallStats(chartData), [chartData]);
   const anomalyCount = chartData.filter((p) => p.isAnomaly).length;
   const peak = chartData.length ? chartData.reduce((best, p) => (p.usage > best.usage ? p : best), chartData[0]) : null;
   const firstLabel = chartData[0]?.label ?? '';
   const lastLabel = chartData[chartData.length - 1]?.label ?? '';
+
+  const isAdaptiveMode = adaptiveInfo ? adaptiveInfo.adaptiveHours > 0 : false;
 
   const explanationPoints = useMemo(() => {
     const list: string[] = [];
     if (chartData.length === 0) return list;
     list.push(`Data: ${chartData.length} hourly readings from ${firstLabel} to ${lastLabel}`);
     if (peak) list.push(`Peak: ${peak.usage.toFixed(2)} kWh at ${peak.label}.`);
-    list.push(`Anomalies in this period: ${anomalyCount} point(s) flagged.`);
+    list.push(`Anomalies in this period: ${anomalyCount} point(s) flagged using ${isAdaptiveMode ? 'Z-score statistical model' : 'fallback thresholds'}.`);
+    if (adaptiveInfo) {
+      list.push(`Model trained on ${adaptiveInfo.totalReadings} historical readings across ${adaptiveInfo.adaptiveHours}/24 hours with adaptive thresholds.`);
+    }
     return list;
-  }, [chartData.length, firstLabel, lastLabel, stats.mean, peak, anomalyCount]);
+  }, [chartData.length, firstLabel, lastLabel, peak, anomalyCount, adaptiveInfo, isAdaptiveMode]);
 
   return (
     <div className="container mx-auto px-6 py-8">
-      {/* <h1 className="text-2xl font-bold text-gray-800 mb-2">Dashboard</h1> */}
+      {/* Model Status Badge */}
+      {adaptiveInfo && (
+        <div className="mb-6 flex items-center gap-3 flex-wrap">
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm border ${isAdaptiveMode
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : 'bg-amber-50 text-amber-700 border-amber-200'
+            }`}>
+            {isAdaptiveMode ? (
+              <><Brain className="w-4 h-4" /> 🧠 Adaptive Mode — Z-Score Statistical Model</>
+            ) : (
+              <><BarChart3 className="w-4 h-4" /> 📊 Fallback Mode — Hardcoded Thresholds</>
+            )}
+          </div>
+          <span className="text-xs text-gray-500">
+            {adaptiveInfo.adaptiveHours}/24 hours with learned thresholds · {adaptiveInfo.totalReadings} total readings stored
+          </span>
+        </div>
+      )}
 
-      {/* Explanation of data and graph (in points) */}
+      {/* Explanation of data and graph */}
       <div className="mb-8 p-5 bg-orange-50 border border-orange-100 rounded-2xl">
         <div className="flex items-center gap-2 mb-4">
           <Info className="w-5 h-5 text-orange-600" />
@@ -148,7 +347,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Electricity usage graph – test_data.csv, red dots for out-of-range */}
+        {/* Electricity usage graph */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
             <Zap className="w-5 h-5 text-orange-500" />
@@ -165,7 +364,7 @@ export default function DashboardPage() {
                     <span className="w-3 h-3 rounded-full bg-orange-500" /> Usage (kWh)
                   </span>
                   <span className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-red-500" /> Alert (abnormality)
+                    <span className="w-3 h-3 rounded-full bg-red-500" /> Anomaly (|Z| &gt; 2)
                   </span>
                 </div>
                 <div className="h-80">
@@ -188,7 +387,11 @@ export default function DashboardPage() {
                       <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" unit=" kWh" domain={[0, 'auto']} tickFormatter={(v) => Number(v).toFixed(2)} />
                       <Tooltip
                         contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb' }}
-                        formatter={(value: unknown) => [`${Number(value ?? 0).toFixed(3)} kWh`]}
+                        formatter={(value: any, _name: any, props: any) => {
+                          const payload = props?.payload as ChartPoint | undefined;
+                          const zLabel = payload?.zScore !== undefined ? ` (Z: ${payload.zScore})` : '';
+                          return [`${Number(value ?? 0).toFixed(3)} kWh${zLabel}`];
+                        }}
                         labelFormatter={(label) => `Time: ${label}`}
                       />
                       <Area
@@ -209,7 +412,7 @@ export default function DashboardPage() {
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">Red dots = abnormality (value out of allowed range for that hour).</p>
+                <p className="text-sm text-gray-500 mt-2">Red dots = statistical anomaly (Z-score &gt; ±2 standard deviations from learned mean).</p>
               </>
             )}
             {!loading && chartData.length === 0 && (
@@ -239,6 +442,72 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Learned Thresholds Table (collapsible) ───────────────────── */}
+      {adaptiveInfo && (
+        <div className="mt-8 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <button
+            onClick={() => setShowThresholds(!showThresholds)}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Brain className="w-5 h-5 text-emerald-600" />
+              <h2 className="text-lg font-semibold text-gray-800">Learned Thresholds Per Hour</h2>
+              <span className="text-xs text-gray-400 ml-2">
+                {isAdaptiveMode ? 'Computed from historical data' : 'Using fallback ranges'}
+              </span>
+            </div>
+            {showThresholds ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+          </button>
+
+          {showThresholds && (
+            <div className="px-6 pb-6">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="py-2 px-3 text-left font-semibold text-gray-600">Hour</th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-600">Mean (kWh)</th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-600">Std Dev</th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-600">Min (μ−2σ)</th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-600">Max (μ+2σ)</th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-600">Readings</th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-600">Source</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 24 }, (_, h) => {
+                      const s = adaptiveInfo.ranges[h];
+                      const isAdaptive = s.count >= 3;
+                      return (
+                        <tr key={h} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2 px-3 font-mono text-gray-800">{String(h).padStart(2, '0')}:00</td>
+                          <td className="py-2 px-3 text-gray-700">{s.mean.toFixed(3)}</td>
+                          <td className="py-2 px-3 text-gray-700">{s.stdDev.toFixed(3)}</td>
+                          <td className="py-2 px-3 text-gray-700">{s.min.toFixed(3)}</td>
+                          <td className="py-2 px-3 text-gray-700">{s.max.toFixed(3)}</td>
+                          <td className="py-2 px-3 text-gray-700">{s.count}</td>
+                          <td className="py-2 px-3">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${isAdaptive ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                              {isAdaptive ? '🧠 Learned' : '📊 Fallback'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-4 text-xs text-gray-500">
+                <strong>How it works:</strong> For each hour, we collect all historical electricity readings and compute the mean (μ) and standard deviation (σ).
+                A reading is flagged as anomalous when it deviates by more than ±2σ from the mean (Z-score &gt; 2), which corresponds to ~95% confidence
+                that the reading is unusual. Hours with fewer than 3 historical readings use hardcoded fallback thresholds.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

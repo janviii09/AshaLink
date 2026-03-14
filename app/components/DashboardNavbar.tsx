@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, HeartPulse, Smile, BellDot, Pill, ShieldCheck } from 'lucide-react';
+import { Home, Users, HeartPulse, Smile, BellDot, Pill, ShieldCheck, Heart } from 'lucide-react';
 
 const navItems = [
   {
@@ -13,7 +13,7 @@ const navItems = [
   {
     label: 'Safety Center',
     href: '/dashboard/community',
-    icon: ShieldCheck // Changed to ShieldCheck for Safety Center
+    icon: ShieldCheck
   },
   {
     label: 'My Companion',
@@ -24,6 +24,11 @@ const navItems = [
     label: 'Medicines',
     href: '/dashboard/medicines',
     icon: Pill
+  },
+  {
+    label: 'Caregiver',
+    href: '/dashboard/caregiver',
+    icon: Heart
   },
 ];
 

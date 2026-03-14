@@ -23,6 +23,7 @@
     "recharts": "^3.7.0",
     "sentiment": "^5.0.2",
     "swiper": "^12.1.0",
+    "tesseract.js": "^7.0.0",
     "twilio": "^5.12.1"
   },
   "devDependencies": {
