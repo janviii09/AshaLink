@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   Heart, Zap, Pill, Brain, TrendingUp, TrendingDown, Minus,
-  AlertTriangle, CheckCircle, BellOff, Bell, Download,
+  AlertTriangle, CheckCircle, BellOff, Bell, Download, Users,
 } from 'lucide-react';
 import HealthAlerts from '../../components/HealthAlerts';
 
@@ -31,6 +31,18 @@ interface Medicine {
   dosage: string;
   timing: string[];
   purpose: string;
+}
+
+interface Caregiver {
+  id: string;
+  name: string;
+  phone: string;
+  relationship: string;
+}
+
+interface CaregiverSettings {
+  elderName: string;
+  caregivers: Caregiver[];
 }
 
 // ─── Data Loaders ─────────────────────────────────────────────────────────
@@ -136,11 +148,26 @@ export default function CaregiverDashboardPage() {
     medicines: [],
     reminders: {},
   });
+  const [caregiverInfo, setCaregiverInfo] = useState<CaregiverSettings>({ elderName: '', caregivers: [] });
 
   useEffect(() => {
     setMoodData(loadMoodData());
     setAnomalyData(loadAnomalyData());
     setMedData(loadMedicineCompliance());
+
+    // Load caregiver names from localStorage
+    try {
+      const saved = localStorage.getItem('caregiver_settings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Handle both old format and new array format
+        if (parsed.caregivers) {
+          setCaregiverInfo(parsed);
+        } else if (parsed.name) {
+          setCaregiverInfo({ elderName: parsed.elderName || '', caregivers: [{ id: '1', name: parsed.name, phone: parsed.phone, relationship: 'Family' }] });
+        }
+      }
+    } catch { /* ignore */ }
   }, []);
 
   // Mood stats
@@ -216,23 +243,40 @@ export default function CaregiverDashboardPage() {
   return (
     <div className="container mx-auto px-6 py-8 min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-200">
             <Heart className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Caregiver Dashboard</h1>
-            <p className="text-sm text-gray-500">Weekly overview of your loved one&apos;s well-being</p>
+            <p className="text-sm text-gray-500">
+              {caregiverInfo.elderName
+                ? <>Monitoring <span className="font-medium text-gray-700">{caregiverInfo.elderName}</span>&apos;s well-being</>
+                : <>Weekly overview of your loved one&apos;s well-being</>}
+            </p>
           </div>
         </div>
-        <button
-          onClick={handleDownloadReport}
-          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 px-5 rounded-xl shadow-md transition-all"
-        >
-          <Download className="w-4 h-4" />
-          Download Report
-        </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Caregiver Names */}
+          {caregiverInfo.caregivers.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <Users className="w-4 h-4 text-purple-500" />
+              {caregiverInfo.caregivers.map(cg => (
+                <span key={cg.id} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
+                  {cg.name} ({cg.relationship})
+                </span>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={handleDownloadReport}
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 px-5 rounded-xl shadow-md transition-all"
+          >
+            <Download className="w-4 h-4" />
+            Download Report
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

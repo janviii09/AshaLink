@@ -28,10 +28,16 @@ interface StoredNeighbour {
   skills: string[];
 }
 
-interface CaregiverSettings {
+interface Caregiver {
+  id: string;
   name: string;
   phone: string;
+  relationship: string;
+}
+
+interface CaregiverSettings {
   elderName: string;
+  caregivers: Caregiver[];
 }
 
 type HelpType = 'groceries' | 'medical' | 'companionship' | 'emergency';
@@ -112,9 +118,10 @@ export default function SafetyCenterPage() {
   const helpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ─── Caregiver ────────────────────────────────────────────────
-  const [caregiverSettings, setCaregiverSettings] = useState<CaregiverSettings>({ name: '', phone: '', elderName: '' });
+  const [caregiverSettings, setCaregiverSettings] = useState<CaregiverSettings>({ elderName: '', caregivers: [] });
   const [showCaregiverModal, setShowCaregiverModal] = useState(false);
   const [notifyStatus, setNotifyStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [newCaregiver, setNewCaregiver] = useState({ name: '', phone: '', relationship: '' });
 
   // ─── Volunteer Signup ─────────────────────────────────────────
   const [showVolunteerModal, setShowVolunteerModal] = useState(false);
@@ -129,7 +136,20 @@ export default function SafetyCenterPage() {
     setContacts(savedContacts ? JSON.parse(savedContacts) : DEFAULT_CONTACTS);
 
     const cg = localStorage.getItem('caregiver_settings');
-    if (cg) setCaregiverSettings(JSON.parse(cg));
+    if (cg) {
+      const parsed = JSON.parse(cg);
+      // Migrate old single-caregiver format to new array format
+      if (parsed && !parsed.caregivers && parsed.name) {
+        const migrated: CaregiverSettings = {
+          elderName: parsed.elderName || '',
+          caregivers: [{ id: Date.now().toString(), name: parsed.name, phone: parsed.phone, relationship: 'Family' }],
+        };
+        setCaregiverSettings(migrated);
+        localStorage.setItem('caregiver_settings', JSON.stringify(migrated));
+      } else {
+        setCaregiverSettings(parsed);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -141,7 +161,9 @@ export default function SafetyCenterPage() {
   }, [contacts]);
 
   useEffect(() => {
-    if (caregiverSettings.phone) localStorage.setItem('caregiver_settings', JSON.stringify(caregiverSettings));
+    if (caregiverSettings.caregivers.length > 0 || caregiverSettings.elderName) {
+      localStorage.setItem('caregiver_settings', JSON.stringify(caregiverSettings));
+    }
   }, [caregiverSettings]);
 
   // ═══ Geolocation ══════════════════════════════════════════════
@@ -180,26 +202,48 @@ export default function SafetyCenterPage() {
     setPopupResponse(null);
   }, [mapNeighbours, userLocation]);
 
-  // ═══ Notify caregiver ═════════════════════════════════════════
+  // ═══ Notify ALL caregivers ═════════════════════════════════════
   const notifyCaregiver = async (eventType: string, details: string) => {
-    if (!caregiverSettings.phone) return;
+    if (caregiverSettings.caregivers.length === 0) return;
     setNotifyStatus('sending');
     try {
-      const res = await fetch('/api/notify-caregiver', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          caregiverPhone: caregiverSettings.phone,
-          elderName: caregiverSettings.elderName || 'Your loved one',
-          eventType,
-          details,
-        }),
-      });
-      setNotifyStatus(res.ok ? 'sent' : 'error');
+      const results = await Promise.allSettled(
+        caregiverSettings.caregivers.map(cg =>
+          fetch('/api/notify-caregiver', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              caregiverPhone: cg.phone,
+              elderName: caregiverSettings.elderName || 'Your loved one',
+              eventType,
+              details,
+            }),
+          })
+        )
+      );
+      const allOk = results.every(r => r.status === 'fulfilled' && (r as PromiseFulfilledResult<Response>).value.ok);
+      setNotifyStatus(allOk ? 'sent' : 'error');
     } catch {
       setNotifyStatus('error');
     }
-    setTimeout(() => setNotifyStatus('idle'), 3000);
+    setTimeout(() => setNotifyStatus('idle'), 4000);
+  };
+
+  // ═══ Add / Remove Caregiver ═══════════════════════════════════
+  const addCaregiver = () => {
+    if (!newCaregiver.name.trim() || !newCaregiver.phone.trim()) return;
+    const cg: Caregiver = {
+      id: Date.now().toString(),
+      name: newCaregiver.name.trim(),
+      phone: newCaregiver.phone.trim(),
+      relationship: newCaregiver.relationship.trim() || 'Family',
+    };
+    setCaregiverSettings(prev => ({ ...prev, caregivers: [...prev.caregivers, cg] }));
+    setNewCaregiver({ name: '', phone: '', relationship: '' });
+  };
+
+  const removeCaregiver = (id: string) => {
+    setCaregiverSettings(prev => ({ ...prev, caregivers: prev.caregivers.filter(c => c.id !== id) }));
   };
 
   // ═══ SOS Logic ════════════════════════════════════════════════
@@ -778,32 +822,56 @@ export default function SafetyCenterPage() {
         </div>
       )}
 
-      {/* Caregiver Settings Modal */}
+      {/* Caregiver Settings Modal — Supports Multiple Caregivers */}
       {showCaregiverModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-5">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Bell className="w-5 h-5 text-amber-500" /> Caregiver Notifications</h3>
               <button onClick={() => setShowCaregiverModal(false)} className="text-gray-500 hover:text-gray-700"><X className="w-6 h-6" /></button>
             </div>
-            <p className="text-sm text-gray-500 mb-4">Set up the son/daughter/caregiver who should be notified when community help is requested for an emergency, or when mood drops.</p>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Elder&apos;s Name</label>
-                <input type="text" className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 outline-none" placeholder="e.g. Maa" value={caregiverSettings.elderName} onChange={e => setCaregiverSettings({ ...caregiverSettings, elderName: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Caregiver Name</label>
-                <input type="text" className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 outline-none" placeholder="e.g. Rahul" value={caregiverSettings.name} onChange={e => setCaregiverSettings({ ...caregiverSettings, name: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Caregiver Phone</label>
-                <input type="tel" className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 outline-none" placeholder="e.g. +919876543210" value={caregiverSettings.phone} onChange={e => setCaregiverSettings({ ...caregiverSettings, phone: e.target.value })} />
-              </div>
-              <button onClick={() => setShowCaregiverModal(false)} className="w-full bg-amber-500 text-white py-3 rounded-xl font-semibold hover:bg-amber-600 mt-2">
-                Save Settings
-              </button>
+            <p className="text-sm text-gray-500 mb-4">Add family members or caregivers who should be notified during emergencies or mood drops. You can add multiple caregivers.</p>
+
+            {/* Elder's Name */}
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Elder&apos;s Name</label>
+              <input type="text" className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 outline-none" placeholder="e.g. Maa" value={caregiverSettings.elderName} onChange={e => setCaregiverSettings(prev => ({ ...prev, elderName: e.target.value }))} />
             </div>
+
+            {/* Existing Caregivers List */}
+            {caregiverSettings.caregivers.length > 0 && (
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Registered Caregivers ({caregiverSettings.caregivers.length})</label>
+                <div className="space-y-2">
+                  {caregiverSettings.caregivers.map(cg => (
+                    <div key={cg.id} className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-200">
+                      <div>
+                        <p className="font-semibold text-gray-800 text-sm">{cg.name}</p>
+                        <p className="text-xs text-gray-500">{cg.relationship} · {cg.phone}</p>
+                      </div>
+                      <button onClick={() => removeCaregiver(cg.id)} className="text-red-400 hover:text-red-600 p-1"><X className="w-4 h-4" /></button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Add New Caregiver Form */}
+            <div className="border-t border-gray-200 pt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Add New Caregiver</label>
+              <div className="space-y-3">
+                <input type="text" className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 outline-none text-sm" placeholder="Name (e.g. Rahul)" value={newCaregiver.name} onChange={e => setNewCaregiver(prev => ({ ...prev, name: e.target.value }))} />
+                <input type="tel" className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 outline-none text-sm" placeholder="Phone (e.g. +919876543210)" value={newCaregiver.phone} onChange={e => setNewCaregiver(prev => ({ ...prev, phone: e.target.value }))} />
+                <input type="text" className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 outline-none text-sm" placeholder="Relationship (e.g. Son, Daughter, Neighbour)" value={newCaregiver.relationship} onChange={e => setNewCaregiver(prev => ({ ...prev, relationship: e.target.value }))} />
+                <button onClick={addCaregiver} disabled={!newCaregiver.name.trim() || !newCaregiver.phone.trim()} className="w-full bg-amber-500 text-white py-2.5 rounded-xl font-semibold hover:bg-amber-600 disabled:bg-gray-300 transition-all text-sm">
+                  + Add Caregiver
+                </button>
+              </div>
+            </div>
+
+            <button onClick={() => setShowCaregiverModal(false)} className="w-full bg-gray-800 text-white py-3 rounded-xl font-semibold hover:bg-gray-900 mt-5">
+              Done
+            </button>
           </div>
         </div>
       )}
