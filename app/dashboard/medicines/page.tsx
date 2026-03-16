@@ -83,6 +83,7 @@ export default function MedicinesPage() {
         medicineName: string | null;
         dosage: string | null;
         manufacturer: string | null;
+        isNotMedicine?: boolean;
     } | null>(null);
 
     // RAG chat state
@@ -198,6 +199,15 @@ export default function MedicinesPage() {
             const data = await response.json();
             if (response.ok) {
                 setScanResult(data);
+            } else if (response.status === 422 && data.error === 'not_medicine') {
+                // Image was not recognized as a medicine
+                setScanResult({
+                    name: '⚠️ Not a Medicine',
+                    purpose: data.message || 'This image does not appear to be a medicine.',
+                    dosage: 'N/A',
+                    warnings: 'Please upload a clear photo of a medicine tablet, capsule, strip, bottle, or packaging.',
+                    disclaimer: 'Try again with a valid medicine image.',
+                });
             } else {
                 alert(data.error || 'Failed to identify medicine');
             }
@@ -237,6 +247,31 @@ export default function MedicinesPage() {
             });
 
             const rawText = result.data.text.trim();
+
+            // ── Medicine Validation ──
+            // Check if extracted text contains medicine-related keywords
+            const medicineKeywords = [
+                'mg', 'ml', 'mcg', 'tablet', 'capsule', 'syrup', 'ointment',
+                'dose', 'dosage', 'usage', 'composition', 'indication',
+                'mfg', 'manufactured', 'marketed', 'pharma', 'pharmaceutical',
+                'prescription', 'batch', 'expiry', 'exp', 'store below',
+                'oral', 'topical', 'injection', 'medicine', 'drug',
+                'strip', 'pack', 'tab', 'cap', 'susp', 'inj',
+            ];
+            const textLower = rawText.toLowerCase();
+            const foundKeywords = medicineKeywords.filter(kw => textLower.includes(kw));
+            const isMedicine = foundKeywords.length >= 1;
+
+            if (!isMedicine && rawText.length > 0) {
+                setLocalOcrResult({
+                    rawText,
+                    medicineName: null,
+                    dosage: null,
+                    manufacturer: null,
+                    isNotMedicine: true,
+                });
+                return;
+            }
 
             // Parse extracted text for medicine-specific information
             const dosageMatch = rawText.match(/(\d+\.?\d*)\s*(mg|ml|mcg|g|IU|%)/i);
@@ -714,15 +749,29 @@ export default function MedicinesPage() {
                                         <Cpu size={16} className="text-purple-600" />
                                         <h4 className="font-bold text-purple-800 text-sm">Local OCR Result (Tesseract.js)</h4>
                                     </div>
-                                    {localOcrResult.medicineName && (
-                                        <p className="text-sm text-gray-700"><span className="font-medium">Detected Name:</span> {localOcrResult.medicineName}</p>
+                                    
+                                    {localOcrResult.isNotMedicine ? (
+                                        <div className="flex items-start gap-2 bg-yellow-50 p-3 rounded-lg border border-yellow-200 mt-2">
+                                            <AlertTriangle size={16} className="text-yellow-600 mt-0.5 shrink-0" />
+                                            <div>
+                                                <p className="font-semibold text-yellow-800 text-sm">⚠️ Not Recognized as Medicine</p>
+                                                <p className="text-xs text-yellow-700 mt-1">We couldn&apos;t find any medicine keywords (mg, tablet, cap, etc.) in this image. Please ensure you uploaded a clear photo of a medicine.</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {localOcrResult.medicineName && (
+                                                <p className="text-sm text-gray-700"><span className="font-medium">Detected Name:</span> {localOcrResult.medicineName}</p>
+                                            )}
+                                            {localOcrResult.dosage && (
+                                                <p className="text-sm text-gray-700"><span className="font-medium">Dosage Found:</span> {localOcrResult.dosage}</p>
+                                            )}
+                                            {localOcrResult.manufacturer && (
+                                                <p className="text-sm text-gray-700"><span className="font-medium">Manufacturer:</span> {localOcrResult.manufacturer}</p>
+                                            )}
+                                        </>
                                     )}
-                                    {localOcrResult.dosage && (
-                                        <p className="text-sm text-gray-700"><span className="font-medium">Dosage Found:</span> {localOcrResult.dosage}</p>
-                                    )}
-                                    {localOcrResult.manufacturer && (
-                                        <p className="text-sm text-gray-700"><span className="font-medium">Manufacturer:</span> {localOcrResult.manufacturer}</p>
-                                    )}
+
                                     <details className="mt-2">
                                         <summary className="text-xs text-purple-600 cursor-pointer font-medium">View raw extracted text</summary>
                                         <pre className="mt-1 text-xs text-gray-600 bg-white p-2 rounded-lg border whitespace-pre-wrap max-h-32 overflow-y-auto">{localOcrResult.rawText || 'No text detected'}</pre>

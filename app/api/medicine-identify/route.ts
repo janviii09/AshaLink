@@ -58,16 +58,25 @@ export async function POST(request: Request) {
                         content: [
                             {
                                 type: 'text',
-                                text: `You are a medicine identification assistant. Look at this image of a medicine (tablet, capsule, or strip). Identify:
+                                text: `You are a medicine identification assistant. First, carefully examine this image.
+
+STEP 1: Determine if this image shows a medicine (tablet, capsule, strip, bottle, syrup, ointment, or medicine packaging). Look for medical text, dosage info, pharma branding, pill shapes, etc.
+
+If this is NOT a medicine image (e.g., food, random object, person, scenery, document, etc.), respond ONLY with:
+{
+  "is_medicine": false,
+  "rejection_reason": "brief reason why this is not a medicine"
+}
+
+If this IS a medicine image, identify:
 1. Likely medicine name
 2. Common purpose/use
 3. Typical dosage
 4. Important warnings or side effects
 
-IMPORTANT: Always add a disclaimer that this is AI-based identification and must be verified by a doctor or pharmacist.
-
 Respond ONLY with this JSON format (no other text):
 {
+  "is_medicine": true,
   "name": "medicine name",
   "purpose": "what this medicine is commonly used for",
   "dosage": "typical dosage information",
@@ -105,13 +114,18 @@ Respond ONLY with this JSON format (no other text):
         // 3. Parse the JSON response from the LLM
         //    The model should return valid JSON, but we handle parsing errors gracefully
         try {
-            // Extract JSON from the response (in case the model wraps it in markdown code blocks)
             const jsonMatch = content.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
+                // Check if the model determined this is NOT a medicine
+                if (parsed.is_medicine === false) {
+                    return NextResponse.json({
+                        error: 'not_medicine',
+                        message: parsed.rejection_reason || 'This does not appear to be a medicine. Please upload an image of a tablet, capsule, strip, or medicine packaging.',
+                    }, { status: 422 });
+                }
                 return NextResponse.json(parsed);
             }
-            // If no JSON found, return the raw text with a structured fallback
             return NextResponse.json({
                 name: 'Unknown',
                 purpose: content,
