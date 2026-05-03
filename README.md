@@ -92,7 +92,7 @@ An intelligent elderly care companion built with **Next.js 16**, combining **AI 
 
 ```bash
 # Clone the repository
-git clone https://github.com/Nishita-shah1/apkasaathi.git
+git clone https://github.com/janviii09/AshaLink
 cd apkasaathi
 
 # Install dependencies
