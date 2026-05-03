@@ -13,13 +13,13 @@ An intelligent elderly care companion built with **Next.js 16**, combining **AI 
 - Collapsible "Learned Thresholds" table showing computed μ, σ, min, max per hour
 - Interactive Recharts AreaChart with color-coded anomaly markers
 
-### 🤖 AI Companion (Saathi)
-- Real-time voice conversation powered by **ElevenLabs Conversational AI** via WebRTC
-- Natural Hindi/English voice responses with customizable AI personality
-- **Hybrid sentiment analysis** — AFINN-based word scoring + custom elderly-specific keyword patterns
-- Mood trend chart with color-coded zones (happy / neutral / distressed)
-- Caregiver alert banner when average mood drops below 4/10
-- Enhanced 7-day downloadable Companion Report with mood summary
+### 🤖 AI Companion (Saathi) - RAG & TTS Powered
+- **RAG-Powered Conversations**: Built on a knowledge base of 5,699 counseling transcripts, using Groq (Llama 3.3 70B) for empathetic, context-aware responses.
+- **Voice Capabilities**: Uses Web Speech API for transcription and **ElevenLabs TTS** for warm, natural, and bilingual (Hindi/English) speech.
+- **Smart SOS Crisis Detection**: Real-time analysis of chat messages detects self-harm or medical emergencies, automatically triggering Twilio SOS calls/SMS and displaying an emergency banner.
+- **Hybrid Sentiment Analysis** — AFINN-based word scoring + custom elderly-specific keyword patterns.
+- Mood trend chart with color-coded zones (happy / neutral / distressed) and downloadable 7-day Companion Reports.
+- **Demo Data Seeder**: Built-in 1-click seeder to populate 7 days of realistic conversation and mood data for evaluation and demonstrations.
 
 ### 💊 Medicine Management + AI Scanner + RAG
 - Add, edit, delete medicines with timing schedules (Morning/Afternoon/Evening/Night)
@@ -146,17 +146,21 @@ app/
 │   ├── medicine-identify/route.ts  # Groq Vision — photo medicine ID
 │   ├── medicine-rag/route.ts       # Groq LLM — RAG medicine queries
 │   ├── notify-caregiver/route.ts   # Twilio SMS to caregiver
+│   ├── rag-chat/route.ts           # RAG pipeline + Smart SOS crisis detection
 │   ├── sentiment/route.ts          # Hybrid sentiment analysis (AFINN + keywords)
 │   ├── sos/route.ts                # Twilio SOS voice calls + SMS
 │   ├── sos-location/route.ts       # SMS GPS location link
-│   └── transcribe/route.ts         # Groq Whisper — voice-to-text
+│   ├── transcribe/route.ts         # Groq Whisper — voice-to-text
+│   └── tts/route.ts                # ElevenLabs Text-to-Speech
 ├── components/
 │   ├── avatar/
-│   │   └── HumanSathi.tsx          # ElevenLabs voice companion UI
+│   │   └── HumanSathi.tsx          # Voice companion UI (Web Speech + TTS)
 │   ├── DashboardNavbar.tsx         # Dashboard navigation bar
 │   ├── HealthAlerts.tsx            # Keyword-based health alert scanner
 │   ├── LoginModal.tsx              # Login form modal
 │   ├── MoodChart.tsx               # Recharts mood trend chart
+│   ├── RagChat.tsx                 # Text-based companion interface
+│   ├── SeedDemoData.tsx            # 7-day realistic demo data generator
 │   ├── NeighbourMap.tsx            # Leaflet community map
 │   ├── Navbar.tsx                  # Landing page navbar
 │   ├── Hero.tsx                    # Landing hero with Swiper slideshow
@@ -180,6 +184,12 @@ app/
 ---
 
 ## 🔬 Key Algorithms & Techniques
+
+### Retrieval-Augmented Generation (RAG)
+The AI Companion utilizes a customized RAG pipeline with a curated dataset of 5,699 mental health and counseling conversations. It computes similarity scores to fetch the most relevant context before generating empathetic responses via Groq's Llama 3 model.
+
+### Smart SOS Crisis Detection
+A multi-tiered keyword detection engine built into the RAG pipeline. It categorizes distress signals into Critical (self-harm), High (medical emergency), and Moderate (emotional distress), instantly routing actionable alerts to the Caregiver Dashboard and triggering Twilio emergency protocols.
 
 ### Z-Score Statistical Anomaly Detection
 For each hour (0–23), the system computes mean and standard deviation from historical electricity readings. A reading is flagged as anomalous when `|Z-score| > 2`, meaning it deviates by more than 2 standard deviations — corresponding to ~95% statistical confidence.
