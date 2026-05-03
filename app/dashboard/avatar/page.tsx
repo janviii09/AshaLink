@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import HumanSathi from '@/app/components/avatar/HumanSathi';
+import RagChat from '@/app/components/RagChat';
 import MoodChart from '@/app/components/MoodChart';
-import { Download, AlertTriangle } from 'lucide-react';
+import SeedDemoData from '@/app/components/SeedDemoData';
+import { Download, AlertTriangle, Phone, X, ShieldAlert } from 'lucide-react';
 
 /**
  * /dashboard/avatar — AI Companion Page (Enhanced with Sentiment Analysis)
@@ -53,11 +55,24 @@ interface Message {
   sentiment?: SentimentData;  // Only present for user messages that have been analyzed
 }
 
+interface CrisisAlert {
+  detected: boolean;
+  severity?: 'critical' | 'high' | 'moderate';
+  type?: string;
+  matchedKeywords?: string[];
+  message?: string;
+}
+
 // ─── Component ───────────────────────────────────────────────────────
 
 export default function AvatarPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // ── Smart SOS State ──────────────────────────────────────────────
+  const [crisisAlert, setCrisisAlert] = useState<CrisisAlert | null>(null);
+  const [sosTriggered, setSosTriggered] = useState(false);
+  const [sosSending, setSosSending] = useState(false);
 
   // ─── Load messages from localStorage on mount ────────────────────
   useEffect(() => {
@@ -98,6 +113,66 @@ export default function AvatarPage() {
       analyzeSentiment(text, newMessage.timestamp);
     }
   };
+
+  // ── Smart SOS: Check RAG response for crisis ────────────────────
+  /**
+   * This runs after EVERY RAG chat response.
+   * If the RAG API detects crisis keywords, it returns crisis metadata.
+   * We use that to auto-trigger SOS alerts via Twilio.
+   *
+   * For your teacher:
+   * "The system performs real-time crisis detection on every message.
+   *  When critical keywords are detected (suicide, chest pain, etc.),
+   *  it automatically sends SMS alerts to the caregiver via Twilio."
+   */
+  const handleCrisisCheck = useCallback(async (crisis: CrisisAlert) => {
+    if (!crisis.detected) return;
+
+    setCrisisAlert(crisis);
+
+    // Auto-trigger SOS for critical and high severity
+    if ((crisis.severity === 'critical' || crisis.severity === 'high') && !sosTriggered) {
+      setSosSending(true);
+      try {
+        // Get caregiver phone from localStorage (set in caregiver page)
+        const caregiverPhone = localStorage.getItem('caregiver_phone') || '';
+        const emergencyContacts = JSON.parse(localStorage.getItem('emergencyContacts') || '[]');
+
+        // 1. Notify caregiver via SMS
+        if (caregiverPhone) {
+          await fetch('/api/notify-caregiver', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              caregiverPhone,
+              elderName: localStorage.getItem('elder_name') || 'Your loved one',
+              eventType: crisis.severity === 'critical' ? 'emergency' : 'mood_alert',
+              details: `Saathi AI detected: ${crisis.type}. Keywords: ${crisis.matchedKeywords?.join(', ')}`,
+            }),
+          });
+        }
+
+        // 2. Trigger full SOS (call + SMS) for critical cases
+        if (crisis.severity === 'critical' && emergencyContacts.length > 0) {
+          const phoneNumbers = emergencyContacts.map((c: { phone: string }) => c.phone).filter(Boolean);
+          if (phoneNumbers.length > 0) {
+            await fetch('/api/sos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phoneNumbers }),
+            });
+          }
+        }
+
+        setSosTriggered(true);
+        console.log('🚨 Smart SOS triggered:', crisis);
+      } catch (error) {
+        console.error('Failed to send SOS:', error);
+      } finally {
+        setSosSending(false);
+      }
+    }
+  }, [sosTriggered]);
 
   // ─── Sentiment Analysis (background, non-blocking) ───────────────
   /**
@@ -261,6 +336,83 @@ ${transcript}
 
   return (
     <div className="container mx-auto px-6 py-8 min-h-screen flex flex-col bg-gray-50">
+
+      {/* ══════════════════════════════════════════════════════════════
+          🚨 SMART SOS — Emergency Alert Banner
+          This appears when crisis keywords are detected in the conversation.
+          For critical: full red banner with pulsing animation
+          For high:     orange warning banner
+          For moderate: yellow info banner
+      ══════════════════════════════════════════════════════════════ */}
+      {crisisAlert?.detected && (
+        <div className={`mb-6 rounded-2xl p-6 shadow-xl border-2 animate-pulse ${
+          crisisAlert.severity === 'critical'
+            ? 'bg-red-600 border-red-800 text-white'
+            : crisisAlert.severity === 'high'
+            ? 'bg-orange-500 border-orange-700 text-white'
+            : 'bg-yellow-50 border-yellow-300 text-yellow-900'
+        }`}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <ShieldAlert className={`w-10 h-10 shrink-0 mt-1 ${
+                crisisAlert.severity === 'critical' || crisisAlert.severity === 'high' ? 'text-white' : 'text-yellow-600'
+              }`} />
+              <div>
+                <h3 className="text-xl font-black">
+                  {crisisAlert.severity === 'critical' && '🆘 EMERGENCY ALERT — Immediate Action Required'}
+                  {crisisAlert.severity === 'high' && '🚑 URGENT — Medical Emergency Detected'}
+                  {crisisAlert.severity === 'moderate' && '⚠️ Emotional Distress Detected'}
+                </h3>
+                <p className={`mt-2 text-lg font-medium ${
+                  crisisAlert.severity === 'critical' || crisisAlert.severity === 'high' ? 'text-white/90' : 'text-yellow-800'
+                }`}>
+                  Saathi detected <strong>{crisisAlert.type}</strong> in the conversation.
+                  {crisisAlert.matchedKeywords && crisisAlert.matchedKeywords.length > 0 && (
+                    <> Triggered by: <em>&ldquo;{crisisAlert.matchedKeywords.join(', ')}&rdquo;</em></>
+                  )}
+                </p>
+
+                {/* SOS Status */}
+                {(crisisAlert.severity === 'critical' || crisisAlert.severity === 'high') && (
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    {sosSending ? (
+                      <span className="inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full font-bold text-sm">
+                        <span className="w-3 h-3 rounded-full bg-white animate-ping" />
+                        Sending SOS to caregiver...
+                      </span>
+                    ) : sosTriggered ? (
+                      <span className="inline-flex items-center gap-2 bg-white/30 px-4 py-2 rounded-full font-bold text-sm">
+                        ✅ SOS sent to caregiver
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full font-bold text-sm">
+                        ⏳ No caregiver phone set — please add in Caregiver page
+                      </span>
+                    )}
+
+                    <a
+                      href="tel:9152987821"
+                      className="inline-flex items-center gap-2 bg-white text-red-700 px-5 py-2 rounded-full font-black text-sm hover:bg-red-100 transition-colors shadow-lg"
+                    >
+                      <Phone size={16} /> Call iCall Helpline
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Dismiss button */}
+            <button
+              onClick={() => setCrisisAlert(null)}
+              className={`p-2 rounded-full hover:bg-white/20 transition-colors ${
+                crisisAlert.severity === 'critical' || crisisAlert.severity === 'high' ? 'text-white' : 'text-yellow-700'
+              }`}
+            >
+              <X size={24} />
+            </button>
+          </div>
+        </div>
+      )}
       {/* ── Caregiver Alert Banner ──────────────────────────────── */}
       {showCaregiverAlert && (
         <div className="mb-6 bg-red-50 border border-red-200 rounded-2xl p-5 shadow-md">
@@ -288,15 +440,18 @@ ${transcript}
         </div>
       )}
 
-      <div className="mb-8 flex justify-between items-center">
+      <div className="mb-8 flex justify-between items-center flex-wrap gap-3">
         <h1 className="text-3xl font-bold text-green-800">AshaLink Companion</h1>
-        <button
-          onClick={handleDownloadReport}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-xl shadow-md transition-colors"
-        >
-          <Download size={20} />
-          Download 7-Day Report
-        </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <SeedDemoData />
+          <button
+            onClick={handleDownloadReport}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-xl shadow-md transition-colors"
+          >
+            <Download size={20} />
+            Download 7-Day Report
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -347,11 +502,22 @@ ${transcript}
           </div>
         </div>
 
-        {/* Human Avatar Section */}
-        <div className="lg:col-span-1 sticky top-8">
+        {/* Human Avatar + RAG Chat Section */}
+        <div className="lg:col-span-1 sticky top-8 space-y-6">
+          {/* Voice Avatar (RAG-powered brain + ElevenLabs TTS) */}
           <div className="bg-white p-6 rounded-3xl shadow-lg border border-gray-200">
-            <HumanSathi onMessageReceived={handleNewMessage} />
+            <HumanSathi
+              onMessageReceived={handleNewMessage}
+              onCrisisDetected={handleCrisisCheck}
+            />
           </div>
+
+          {/* Text Chat (RAG-powered) */}
+          <RagChat
+            onMessageReceived={handleNewMessage}
+            onCrisisDetected={handleCrisisCheck}
+            messages={messages.map(m => ({ role: m.role, text: m.text }))}
+          />
         </div>
       </div>
     </div>
