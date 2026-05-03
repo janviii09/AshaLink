@@ -224,8 +224,4 @@ This project is private. All rights reserved.
 
 ---
 
-## 👥 Author
-
-**Janvi Gupta**
-
 Built with ❤️ for elderly care.
