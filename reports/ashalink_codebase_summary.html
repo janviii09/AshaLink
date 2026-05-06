@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AshaLink Codebase Summary</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: #172033;
+      background: #f4f7fb;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.35;
+    }
+
+    .page {
+      width: 210mm;
+      height: 297mm;
+      padding: 18mm 17mm 16mm;
+      background: #ffffff;
+      page-break-after: always;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page:last-child {
+      page-break-after: auto;
+    }
+
+    .cover {
+      background:
+        linear-gradient(140deg, rgba(244, 111, 31, 0.13), rgba(23, 126, 137, 0.1)),
+        #ffffff;
+    }
+
+    .eyebrow {
+      color: #e46822;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 36px;
+      line-height: 1.05;
+      color: #111827;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 23px;
+      color: #111827;
+    }
+
+    h3 {
+      margin: 16px 0 7px;
+      font-size: 14px;
+      color: #0f766e;
+    }
+
+    p {
+      margin: 0 0 10px;
+      font-size: 11.4px;
+    }
+
+    ul {
+      margin: 6px 0 12px 18px;
+      padding: 0;
+      font-size: 11.1px;
+    }
+
+    li {
+      margin: 4px 0;
+    }
+
+    .lead {
+      font-size: 14px;
+      margin-top: 18px;
+      max-width: 165mm;
+      color: #344054;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .grid.three {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .card {
+      border: 1px solid #d9e2ec;
+      border-radius: 8px;
+      padding: 10px;
+      background: #fbfdff;
+    }
+
+    .stat {
+      font-size: 25px;
+      font-weight: 800;
+      color: #e46822;
+      margin-bottom: 3px;
+    }
+
+    .label {
+      font-size: 9.5px;
+      color: #52616f;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      font-weight: 700;
+    }
+
+    .small {
+      font-size: 10px;
+      color: #52616f;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: #fff4ed;
+      color: #b45309;
+      font-size: 9.7px;
+      font-weight: 700;
+      margin: 0 4px 5px 0;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      margin: 10px 0 14px;
+    }
+
+    .step {
+      min-height: 42px;
+      border-radius: 8px;
+      background: #f0fdfa;
+      border: 1px solid #b7ebe4;
+      padding: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #115e59;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 14px;
+      font-size: 10.3px;
+    }
+
+    th, td {
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 6px;
+      vertical-align: top;
+    }
+
+    th {
+      color: #334155;
+      background: #f8fafc;
+      font-size: 9.4px;
+      text-transform: uppercase;
+      letter-spacing: 0.35px;
+    }
+
+    code {
+      color: #0f766e;
+      background: #ecfeff;
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-family: Menlo, Consolas, monospace;
+      font-size: 9.8px;
+    }
+
+    .footer {
+      position: absolute;
+      left: 17mm;
+      right: 17mm;
+      bottom: 9mm;
+      display: flex;
+      justify-content: space-between;
+      color: #8a98a8;
+      font-size: 9px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 5px;
+    }
+
+    .callout {
+      border-left: 4px solid #e46822;
+      background: #fff7ed;
+      padding: 10px 12px;
+      margin: 12px 0;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <section class="page cover">
+    <div class="eyebrow">Codebase Summary Report</div>
+    <h1>AshaLink / ApkaSaathi</h1>
+    <p class="lead">
+      AshaLink is an elderly-care web platform built with Next.js and a Python ML backend. The project combines AI companionship, activity monitoring, medicine management, emergency workflows, neighborhood support, and caregiver reporting into a privacy-first dashboard experience.
+    </p>
+
+    <div class="grid three" style="margin-top: 24px;">
+      <div class="card">
+        <div class="stat">8,399</div>
+        <div class="label">App and backend source lines</div>
+        <p class="small">Across TypeScript, TSX, and Python files in <code>app/</code> and <code>backend/</code>.</p>
+      </div>
+      <div class="card">
+        <div class="stat">12</div>
+        <div class="label">Next.js API routes</div>
+        <p class="small">Voice, RAG, sentiment, SOS, medicine AI, transcription, caregiver alerts, and ML proxy routes.</p>
+      </div>
+      <div class="card">
+        <div class="stat">5,699</div>
+        <div class="label">RAG knowledge entries</div>
+        <p class="small">Stored in <code>public/rag_knowledge_base.json</code> and retrieved by the companion route.</p>
+      </div>
+    </div>
+
+    <h3>What the project does</h3>
+    <ul>
+      <li>Monitors electricity usage as a non-intrusive signal for daily routine changes.</li>
+      <li>Provides Saathi, an AI companion with chat, voice, mood scoring, crisis detection, and report downloads.</li>
+      <li>Supports medicine CRUD, AI medicine identification, local OCR, reminders, and medicine-specific RAG Q&A.</li>
+      <li>Manages SOS contacts, Twilio calls/SMS, live location sharing, volunteers, and neighborhood help simulation.</li>
+      <li>Aggregates caregiver insights from local mood, anomaly, medicine, and health-keyword data.</li>
+    </ul>
+
+    <div class="callout">
+      The dominant design choice is local-first persistence. Chat history, medicines, contacts, electricity history, reminder state, and caregiver settings are stored in browser <code>localStorage</code>, while cloud services are used only for selected AI, voice, and emergency actions.
+    </div>
+
+    <h3>Primary technology stack</h3>
+    <p>
+      <span class="pill">Next.js 16 App Router</span>
+      <span class="pill">React 19</span>
+      <span class="pill">TypeScript</span>
+      <span class="pill">Tailwind CSS</span>
+      <span class="pill">Recharts</span>
+      <span class="pill">Leaflet</span>
+      <span class="pill">Framer Motion</span>
+      <span class="pill">Gemini</span>
+      <span class="pill">Groq</span>
+      <span class="pill">ElevenLabs</span>
+      <span class="pill">Twilio</span>
+      <span class="pill">FastAPI</span>
+    </p>
+
+    <div class="footer"><span>AshaLink codebase summary</span><span>Page 1 of 6</span></div>
+  </section>
+
+  <section class="page">
+    <div class="eyebrow">Architecture</div>
+    <h2>Application Structure and Data Flow</h2>
+    <p>
+      The app uses the Next.js App Router. The landing page is composed from marketing and onboarding components, while the dashboard routes host the operational product areas. API routes under <code>app/api</code> integrate with external AI and communication services. A separate FastAPI backend loads serialized ML models and exposes prediction endpoints consumed through the Next.js proxy route.
+    </p>
+
+    <h3>Top-level structure</h3>
+    <table>
+      <tr><th>Area</th><th>Purpose</th><th>Important files</th></tr>
+      <tr><td>Landing experience</td><td>Product introduction, login modal, feature sections, CTA.</td><td><code>app/page.tsx</code>, <code>Hero.tsx</code>, <code>Features.tsx</code>, <code>CompetitiveEdge.tsx</code></td></tr>
+      <tr><td>Dashboard shell</td><td>Shared dashboard navigation and route layout.</td><td><code>app/dashboard/layout.tsx</code>, <code>DashboardNavbar.tsx</code></td></tr>
+      <tr><td>Monitoring</td><td>Electricity charting, Z-score detection, adaptive hourly thresholds, ML toggle.</td><td><code>app/dashboard/page.tsx</code>, <code>public/test_data.csv</code></td></tr>
+      <tr><td>AI companion</td><td>Voice avatar, text RAG chat, sentiment analysis, mood chart, reports, Smart SOS.</td><td><code>app/dashboard/avatar/page.tsx</code>, <code>HumanSathi.tsx</code>, <code>RagChat.tsx</code>, <code>MoodChart.tsx</code></td></tr>
+      <tr><td>Medicines</td><td>Medicine records, camera upload, cloud AI scan, local OCR, RAG answers, reminders.</td><td><code>app/dashboard/medicines/page.tsx</code>, <code>medicine-identify</code>, <code>medicine-rag</code></td></tr>
+      <tr><td>Safety and caregiver</td><td>SOS, neighbors, volunteers, location sharing, caregiver summary and downloads.</td><td><code>community/page.tsx</code>, <code>caregiver/page.tsx</code>, <code>HealthAlerts.tsx</code></td></tr>
+    </table>
+
+    <h3>Client-to-service flow</h3>
+    <div class="flow">
+      <div class="step">User action in dashboard</div>
+      <div class="step">React state and localStorage update</div>
+      <div class="step">Next.js API route when cloud/ML is needed</div>
+      <div class="step">External AI, Twilio, or FastAPI backend response</div>
+    </div>
+
+    <p>
+      The frontend does most routine work locally: chart statistics, medicine state, health keyword scans, reports, emergency contact management, and community simulation. Server routes are thin adapters around third-party APIs or the local ML server. This keeps the UI fast for demos and makes privacy easy to explain.
+    </p>
+
+    <h3>API surface</h3>
+    <ul>
+      <li><code>/api/rag-chat</code>: loads the counseling knowledge base, retrieves similar conversations, applies crisis detection, and generates the Saathi response through Gemini.</li>
+      <li><code>/api/sentiment</code>: Gemini-based mood scoring with elderly-specific keyword penalties and crisis overrides.</li>
+      <li><code>/api/medicine-identify</code> and <code>/api/medicine-rag</code>: Groq Vision and Groq LLM medicine workflows.</li>
+      <li><code>/api/sos</code>, <code>/api/sos-location</code>, <code>/api/notify-caregiver</code>: Twilio voice/SMS emergency and caregiver notifications.</li>
+      <li><code>/api/transcribe</code> and <code>/api/tts</code>: Groq Whisper and ElevenLabs speech support.</li>
+      <li><code>/api/ml-anomaly</code>: proxy to the FastAPI anomaly prediction service on port 8000.</li>
+    </ul>
+
+    <div class="footer"><span>AshaLink codebase summary</span><span>Page 2 of 6</span></div>
+  </section>
+
+  <section class="page">
+    <div class="eyebrow">Core Experience</div>
+    <h2>Dashboard Features and User Workflows</h2>
+    <p>
+      The dashboard is organized around practical elderly-care workflows rather than a single monolithic page. Each section has its own local state model and reportable outputs, which makes the project easy to demo module by module.
+    </p>
+
+    <h3>Activity monitoring</h3>
+    <p>
+      <code>app/dashboard/page.tsx</code> reads hourly electricity readings from <code>public/test_data.csv</code>, stores them into <code>electricity_history</code>, and computes per-hour adaptive ranges. If an hour has at least three readings, it uses mean and sample standard deviation; otherwise, it falls back to hardcoded ranges. The chart marks anomalies when <code>|Z-score| &gt; 2</code>.
+    </p>
+    <ul>
+      <li>The dashboard keeps only the last 30 days of hourly readings.</li>
+      <li>The user can switch from statistical Z-score detection to ML ensemble mode.</li>
+      <li>The UI explains peak usage, anomaly counts, date span, and whether adaptive or fallback thresholds are active.</li>
+    </ul>
+
+    <h3>AI companion</h3>
+    <p>
+      <code>app/dashboard/avatar/page.tsx</code> coordinates the Saathi companion. It persists messages in <code>avatar_messages</code>, sends user messages for background sentiment analysis, displays mood trends, and reacts to crisis metadata from the RAG route.
+    </p>
+    <ul>
+      <li><code>HumanSathi.tsx</code> provides the voice-oriented companion UI.</li>
+      <li><code>RagChat.tsx</code> sends text messages, recent history, and the elder name to the RAG API.</li>
+      <li><code>MoodChart.tsx</code> visualizes sentiment scores on a 1-10 well-being scale.</li>
+      <li><code>SeedDemoData.tsx</code> can create realistic sample data for demos and caregiver reports.</li>
+    </ul>
+
+    <h3>Medicine management</h3>
+    <p>
+      <code>app/dashboard/medicines/page.tsx</code> is one of the largest feature files. It manages medicine CRUD, stores records in <code>user_medicines</code>, tracks reminders in <code>medicine_reminders</code>, supports image upload, and offers both cloud AI recognition and local OCR extraction.
+    </p>
+    <ul>
+      <li>Cloud scanner sends base64 images to Groq Vision and expects structured JSON about medicine name, purpose, dosage, warnings, and disclaimer.</li>
+      <li>Local scanner uses Tesseract.js WebAssembly in the browser and regex extraction for dosage/manufacturer details.</li>
+      <li>The RAG medicine Q&A sends only the user's saved medicine list as context, reducing hallucinated advice.</li>
+    </ul>
+
+    <h3>Safety and community</h3>
+    <p>
+      <code>app/dashboard/community/page.tsx</code> brings together emergency contacts, a Leaflet neighbor map, volunteer signup, help-request simulation, caregiver notification, siren audio, SOS calls/SMS, and location sharing. Distances are calculated with the Haversine formula.
+    </p>
+
+    <div class="footer"><span>AshaLink codebase summary</span><span>Page 3 of 6</span></div>
+  </section>
+
+  <section class="page">
+    <div class="eyebrow">AI and ML</div>
+    <h2>Intelligence Layer</h2>
+    <p>
+      The codebase uses a hybrid intelligence strategy: browser-side rules for low-risk privacy-sensitive checks, hosted LLMs for language/vision/speech, and local Python models for structured anomaly and emotion prediction.
+    </p>
+
+    <h3>RAG companion route</h3>
+    <p>
+      <code>app/api/rag-chat/route.ts</code> loads <code>public/rag_knowledge_base.json</code> into memory, tokenizes the user's message, compares it against counseling contexts, retrieves the top five matching examples, and appends them to the system prompt. The final generation is performed with <code>gemini-2.5-flash</code>.
+    </p>
+    <ul>
+      <li>The retrieval is TF-IDF-inspired keyword overlap rather than vector embeddings.</li>
+      <li>The system prompt is elderly-care specific, India-aware, bilingual-friendly, and includes medical refusal rules.</li>
+      <li>The route accepts recent chat history and a saved user name for personalization.</li>
+    </ul>
+
+    <h3>Smart SOS and sentiment</h3>
+    <p>
+      Crisis detection is duplicated in useful ways. The RAG route checks every companion message for critical self-harm, high-severity medical, and moderate emotional distress keywords. The sentiment route separately applies crisis overrides so dangerous language cannot be smoothed away by a neutral model score.
+    </p>
+    <table>
+      <tr><th>Layer</th><th>Method</th><th>Output</th></tr>
+      <tr><td>RAG crisis detection</td><td>Keyword severity tiers</td><td>Structured crisis metadata returned to the UI</td></tr>
+      <tr><td>Sentiment route</td><td>Gemini scoring plus local keyword modifiers</td><td>Sentiment label, score, explanation, concerns</td></tr>
+      <tr><td>Health alerts</td><td>Browser-only keyword category counts</td><td>Normal, attention, or urgent weekly alert category</td></tr>
+    </table>
+
+    <h3>FastAPI ML backend</h3>
+    <p>
+      <code>backend/main.py</code> starts a FastAPI service with CORS for localhost Next.js. It loads two predictor classes at startup: <code>AnomalyPredictor</code> and <code>EmotionPredictor</code>.
+    </p>
+    <ul>
+      <li><code>AnomalyPredictor</code> engineers nine features: kWh, cyclical hour/day encodings, weekend flag, rolling mean, rolling standard deviation, and kWh ratio.</li>
+      <li>It runs Isolation Forest, Random Forest, and Gradient Boosting, then uses 2-of-3 majority voting.</li>
+      <li><code>EmotionPredictor</code> loads TF-IDF, a MultiLabelBinarizer, four one-vs-rest classifiers, and a macro sentiment classifier trained around GoEmotions labels.</li>
+      <li>The emotion API returns primary emotion, detected emotions, top scores, macro sentiment, a well-being score, and elderly-care concern flags.</li>
+    </ul>
+
+    <h3>Saved model inventory</h3>
+    <p>
+      The repository contains serialized anomaly models, scalers, sequence autoencoders, and GoEmotions classifiers under <code>saved_models/</code> and <code>saved_models_goemotion/</code>. This makes the backend self-contained for local inference once Python dependencies are installed.
+    </p>
+
+    <div class="footer"><span>AshaLink codebase summary</span><span>Page 4 of 6</span></div>
+  </section>
+
+  <section class="page">
+    <div class="eyebrow">Integrations and Privacy</div>
+    <h2>External Services, Storage, and Safety Posture</h2>
+    <p>
+      AshaLink depends on several cloud APIs, but the code is careful to keep many routine operations local. The practical privacy story is strongest around local OCR, localStorage persistence, local charting, and browser-side keyword scanning.
+    </p>
+
+    <h3>External integrations</h3>
+    <table>
+      <tr><th>Service</th><th>Used for</th><th>Routes/components</th></tr>
+      <tr><td>Gemini</td><td>Companion RAG generation and sentiment scoring.</td><td><code>rag-chat</code>, <code>sentiment</code></td></tr>
+      <tr><td>Groq</td><td>Medicine vision, medicine RAG, and Whisper transcription.</td><td><code>medicine-identify</code>, <code>medicine-rag</code>, <code>transcribe</code></td></tr>
+      <tr><td>ElevenLabs</td><td>Text-to-speech and voice cloning.</td><td><code>tts</code>, <code>clone</code></td></tr>
+      <tr><td>Twilio</td><td>SOS voice calls, SMS alerts, caregiver notifications, location links.</td><td><code>sos</code>, <code>sos-location</code>, <code>notify-caregiver</code></td></tr>
+      <tr><td>HeyGen</td><td>Streaming avatar session token.</td><td><code>heygen</code></td></tr>
+      <tr><td>Tesseract.js</td><td>In-browser OCR for medicine images.</td><td><code>medicines/page.tsx</code></td></tr>
+    </table>
+
+    <h3>Local data keys</h3>
+    <ul>
+      <li><code>avatar_messages</code>: companion transcript and sentiment metadata.</li>
+      <li><code>electricity_history</code>: recent hourly electricity readings for adaptive thresholding.</li>
+      <li><code>user_medicines</code> and <code>medicine_reminders</code>: medicine records and reminder toggles.</li>
+      <li><code>sos_contacts</code>, <code>community_neighbours</code>, and <code>caregiver_settings</code>: safety contacts, local support network, and caregiver settings.</li>
+      <li><code>elder_name</code> and legacy <code>caregiver_phone</code>: personalization and older notification flow compatibility.</li>
+    </ul>
+
+    <h3>Security and maintainability observations</h3>
+    <ul>
+      <li>Most secrets are read from environment variables, but <code>app/api/clone/route.ts</code> contains a hardcoded ElevenLabs API key comment. That should be rotated and moved to environment configuration before any public deployment.</li>
+      <li>Several files include demo-ready default data, phone numbers, and client-only localStorage flows. This is suitable for prototype evaluation, but production would need authenticated user accounts and server-side access controls.</li>
+      <li>The README mentions Groq for RAG, while the current companion route uses Gemini. The documentation should be updated so reviewers see the actual implementation.</li>
+      <li>The project has two anomaly paths: browser Z-score detection and backend ML ensemble. This is a strength for demos, but the UI/report should clearly label which result source is active.</li>
+    </ul>
+
+    <div class="callout">
+      Best current positioning: a strong hackathon/prototype architecture for elderly-care assistance, with local-first privacy choices and credible AI/ML demonstrations. Main production gaps are authentication, secret hygiene, durable storage, audit trails, and clinical/legal safety review.
+    </div>
+
+    <div class="footer"><span>AshaLink codebase summary</span><span>Page 5 of 6</span></div>
+  </section>
+
+  <section class="page">
+    <div class="eyebrow">Executive Summary</div>
+    <h2>Strengths, Risks, and Next Steps</h2>
+
+    <h3>Project strengths</h3>
+    <ul>
+      <li>Broad but coherent feature set around elderly independence, caregiver visibility, and emergency response.</li>
+      <li>Clear separation between dashboard modules, API integrations, and Python model inference.</li>
+      <li>Strong demo value: seeded data, charts, maps, voice, OCR, medicine AI, SOS, and downloadable reports.</li>
+      <li>Good algorithm explainability: Z-score thresholds, Haversine distance, local keyword dictionaries, model majority voting, and RAG source display.</li>
+      <li>Privacy-aware implementation choices, especially local OCR, local sentiment/keyword scanning patterns, and browser persistence.</li>
+    </ul>
+
+    <h3>Important risks</h3>
+    <ul>
+      <li>Hardcoded API credential in <code>app/api/clone/route.ts</code> must be treated as exposed.</li>
+      <li>No authentication or user isolation is visible in the current app; browser storage is per-device, not per-account.</li>
+      <li>Emergency and mental-health features need careful disclaimers, operational testing, and regional emergency-number handling before real-world use.</li>
+      <li>Saved ML models are present, but training provenance, evaluation metrics, and dataset documentation are limited in the application surface.</li>
+      <li>Large feature files such as medicines, community, dashboard, and avatar pages would benefit from splitting into smaller components and hooks.</li>
+    </ul>
+
+    <h3>Recommended next development steps</h3>
+    <table>
+      <tr><th>Priority</th><th>Work item</th><th>Why it matters</th></tr>
+      <tr><td>1</td><td>Rotate the hardcoded ElevenLabs key and remove it from source.</td><td>Prevents misuse and makes the repo safer to share.</td></tr>
+      <tr><td>2</td><td>Add authentication and move sensitive user data to a protected backend store.</td><td>Supports real caregiver/elder accounts and cross-device continuity.</td></tr>
+      <tr><td>3</td><td>Align README claims with code, especially Gemini versus Groq usage in companion RAG.</td><td>Improves evaluator trust and avoids implementation confusion.</td></tr>
+      <tr><td>4</td><td>Add tests for Z-score parsing, crisis detection, medicine OCR extraction, and API validation.</td><td>Protects the highest-risk logic from regressions.</td></tr>
+      <tr><td>5</td><td>Refactor large dashboard pages into hooks, panels, and service helpers.</td><td>Makes future development easier and reduces merge risk.</td></tr>
+    </table>
+
+    <h3>One-paragraph conclusion</h3>
+    <p>
+      AshaLink is a substantial elderly-care prototype with real product thinking behind it. The codebase demonstrates multiple assistive-care pillars: passive routine monitoring, companion conversation, medicine support, emergency escalation, community assistance, and caregiver reporting. Its strongest technical story is the blend of explainable local logic with cloud AI and local ML inference. With secret cleanup, authentication, stronger tests, and some modular refactoring, it can move from a feature-rich demo toward a safer and more maintainable care platform.
+    </p>
+
+    <div class="grid three" style="margin-top: 16px;">
+      <div class="card">
+        <div class="label">Best demo path</div>
+        <p class="small">Seed data, show dashboard anomalies, chat with Saathi, scan medicine, trigger caregiver/SOS flow, then open caregiver report.</p>
+      </div>
+      <div class="card">
+        <div class="label">Best technical highlight</div>
+        <p class="small">Compare Z-score anomaly detection with the FastAPI ML ensemble and explain why both are useful.</p>
+      </div>
+      <div class="card">
+        <div class="label">Best privacy highlight</div>
+        <p class="small">LocalStorage, local OCR, browser health keyword analysis, and no camera/wearable dependency for activity monitoring.</p>
+      </div>
+    </div>
+
+    <div class="footer"><span>AshaLink codebase summary</span><span>Page 6 of 6</span></div>
+  </section>
+</body>
+</html>

@@ -2,15 +2,24 @@ import { NextResponse } from 'next/server';
 
 export async function POST() {
   try {
-    // Hardcoded key for direct use
-    const HEYGEN_API_KEY = "sk_V2_hgu_kUyTrOHKmx8_qIozJymcO3bDssHDv9yIt6iE0GbeHar5";
+    const HEYGEN_API_KEY = process.env.HEYGEN_API_KEY;
 
-    const res = await fetch("https://api.heygen.com/v1/streaming.create_token", {
+    if (!HEYGEN_API_KEY) {
+      return NextResponse.json({ error: "HEYGEN_API_KEY is not set" }, { status: 500 });
+    }
+
+    // New 2026 LiveAvatar Endpoint
+    const res = await fetch("https://api.liveavatar.com/v1/sessions/token", {
       method: "POST",
       headers: { 
-        "x-api-key": HEYGEN_API_KEY,
+        "X-API-KEY": HEYGEN_API_KEY,
         "Content-Type": "application/json"
       },
+      body: JSON.stringify({
+        avatar_id: "3c90c3cc-0d44-4b50-8888-8dd25736052a",
+        mode: "LITE",
+        video_settings: { quality: "medium" }
+      })
     });
 
     const data = await res.json();
@@ -24,8 +33,8 @@ export async function POST() {
       }, { status: res.status });
     }
 
-    // Success: Return the token to your HumanSathi component
-    return NextResponse.json({ token: data.data.token });
+    // Success: Return the session_token to your HumanSathi component
+    return NextResponse.json({ token: data.data.session_token });
     
   } catch (error) {
     console.error("Server Error in HeyGen route:", error);

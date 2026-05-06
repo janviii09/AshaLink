@@ -12,6 +12,7 @@
   "dependencies": {
     "@11labs/react": "^0.2.0",
     "@elevenlabs/react": "^0.14.0",
+    "@google/generative-ai": "^0.24.1",
     "@heygen/streaming-avatar": "^2.1.0",
     "elevenlabs": "^1.59.0",
     "framer-motion": "^12.33.0",
@@ -19,6 +20,7 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^0.563.0",
     "next": "^16.1.6",
+    "openai": "^6.36.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-leaflet": "^5.0.0",

@@ -10,7 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { Zap, Bell, Info, Brain, ChevronDown, ChevronUp, BarChart3 } from 'lucide-react';
+import { Zap, Bell, Info, Brain, ChevronDown, ChevronUp, BarChart3, Cpu, Loader2 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -248,6 +248,16 @@ export default function DashboardPage() {
   } | null>(null);
   const [showThresholds, setShowThresholds] = useState(false);
 
+  // ── ML Model State ────────────────────────────────────────────────
+  const [mlMode, setMlMode] = useState(false);
+  const [mlLoading, setMlLoading] = useState(false);
+  const [mlResults, setMlResults] = useState<{
+    total: number;
+    anomalies: number;
+    predictions: Array<{ is_anomaly: boolean; confidence: number; models: Record<string, { is_anomaly: boolean }> }>;
+  } | null>(null);
+  const [mlError, setMlError] = useState<string | null>(null);
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -300,36 +310,125 @@ export default function DashboardPage() {
 
   const isAdaptiveMode = adaptiveInfo ? adaptiveInfo.adaptiveHours > 0 : false;
 
+  // ── ML Model: run ensemble prediction on all chart data ──────────
+  const runMlModels = async () => {
+    if (chartData.length === 0) return;
+    setMlLoading(true);
+    setMlError(null);
+    try {
+      const readings = chartData.map((p, index, arr) => {
+        const hour = parseInt(p.label.split(' ').pop()?.split(':')[0] || '0', 10);
+
+        // Calculate up to 24h rolling window
+        const windowStart = Math.max(0, index - 23);
+        const windowValues = arr.slice(windowStart, index + 1).map(x => x.usage);
+        const rolling_mean = windowValues.reduce((sum, val) => sum + val, 0) / windowValues.length;
+
+        let rolling_std = 0.1;
+        if (windowValues.length > 1) {
+          const variance = windowValues.reduce((sum, val) => sum + Math.pow(val - rolling_mean, 2), 0) / (windowValues.length - 1);
+          rolling_std = Math.max(Math.sqrt(variance), 0.001);
+        }
+
+        const date = new Date(p.timestamp);
+        const day_of_week = isNaN(date.getDay()) ? 2 : (date.getDay() + 6) % 7; // 0=Mon, 6=Sun
+
+        return { kWh: p.usage, hour, day_of_week, rolling_mean, rolling_std };
+      });
+      const res = await fetch('/api/ml-anomaly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ readings }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.hint || err.details || 'ML backend error');
+      }
+      const data = await res.json();
+      setMlResults(data);
+      setMlMode(true);
+    } catch (e) {
+      setMlError(e instanceof Error ? e.message : 'Failed to reach ML backend');
+    } finally {
+      setMlLoading(false);
+    }
+  };
+
+  // Overlay ML predictions on chart data when in ML mode
+  const displayData = useMemo(() => {
+    if (!mlMode || !mlResults) return chartData;
+    return chartData.map((p, i) => ({
+      ...p,
+      isAnomaly: mlResults.predictions[i]?.is_anomaly ?? p.isAnomaly,
+    }));
+  }, [chartData, mlMode, mlResults]);
+
   const explanationPoints = useMemo(() => {
     const list: string[] = [];
     if (chartData.length === 0) return list;
     list.push(`Data: ${chartData.length} hourly readings from ${firstLabel} to ${lastLabel}`);
     if (peak) list.push(`Peak: ${peak.usage.toFixed(2)} kWh at ${peak.label}.`);
-    list.push(`Anomalies in this period: ${anomalyCount} point(s) flagged using ${isAdaptiveMode ? 'Z-score statistical model' : 'fallback thresholds'}.`);
-    if (adaptiveInfo) {
-      list.push(`Model trained on ${adaptiveInfo.totalReadings} historical readings across ${adaptiveInfo.adaptiveHours}/24 hours with adaptive thresholds.`);
+    if (mlMode && mlResults) {
+      list.push(`Anomalies: ${mlResults.anomalies}/${mlResults.total} point(s) flagged by ML ensemble`);
+      list.push(`Ensemble uses majority voting — a reading is anomalous based on the aggregated decision of multiple models.`);
+    } else {
+      list.push(`Anomalies in this period: ${anomalyCount} point(s) flagged using ${isAdaptiveMode ? 'Z-score statistical model' : 'fallback thresholds'}.`);
+      if (adaptiveInfo) {
+        list.push(`Model trained on ${adaptiveInfo.totalReadings} historical readings across ${adaptiveInfo.adaptiveHours}/24 hours with adaptive thresholds.`);
+      }
     }
     return list;
-  }, [chartData.length, firstLabel, lastLabel, peak, anomalyCount, adaptiveInfo, isAdaptiveMode]);
+  }, [chartData.length, firstLabel, lastLabel, peak, anomalyCount, adaptiveInfo, isAdaptiveMode, mlMode, mlResults]);
 
   return (
     <div className="container mx-auto px-6 py-8">
-      {/* Model Status Badge */}
-      {adaptiveInfo && (
-        <div className="mb-6 flex items-center gap-3 flex-wrap">
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm border ${isAdaptiveMode
+      {/* Model Status Badge + ML Toggle */}
+      <div className="mb-6 flex items-center gap-3 flex-wrap">
+        {adaptiveInfo && (
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm border ${mlMode
+            ? 'bg-purple-50 text-purple-700 border-purple-200'
+            : isAdaptiveMode
               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
               : 'bg-amber-50 text-amber-700 border-amber-200'
             }`}>
-            {isAdaptiveMode ? (
-              <><Brain className="w-4 h-4" /> 🧠 Adaptive Mode — Z-Score Statistical Model</>
+            {mlMode ? (
+              <><Cpu className="w-4 h-4" /> 🤖 ML Ensemble </>
+            ) : isAdaptiveMode ? (
+              <><Brain className="w-4 h-4" /> 🧠 Adaptive Mode </>
             ) : (
-              <><BarChart3 className="w-4 h-4" /> 📊 Fallback Mode — Hardcoded Thresholds</>
+              <><BarChart3 className="w-4 h-4" /> 📊 Fallback Mode </>
             )}
           </div>
+        )}
+        <button
+          onClick={mlMode ? () => { setMlMode(false); setMlResults(null); } : runMlModels}
+          disabled={mlLoading || chartData.length === 0}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm border transition-all ${mlMode
+            ? 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+            : 'bg-purple-600 text-white border-purple-700 hover:bg-purple-700'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          {mlLoading ? (
+            <><Loader2 className="w-4 h-4 animate-spin" /> Running ML Models...</>
+          ) : mlMode ? (
+            <><Brain className="w-4 h-4" /> Switch to Z-Score</>
+          ) : (
+            <><Cpu className="w-4 h-4" /> Run ML Models</>
+          )}
+        </button>
+        {adaptiveInfo && !mlMode && (
           <span className="text-xs text-gray-500">
-            {adaptiveInfo.adaptiveHours}/24 hours with learned thresholds · {adaptiveInfo.totalReadings} total readings stored
           </span>
+        )}
+        {mlResults && mlMode && (
+          <span className="text-xs text-gray-500">
+            {mlResults.anomalies}/{mlResults.total} flagged by ensemble
+          </span>
+        )}
+      </div>
+      {mlError && (
+        <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-xl text-sm border border-red-200">
+          ⚠️ ML Backend Error: {mlError} — Make sure the Python backend is running on port 8000.
         </div>
       )}
 
@@ -357,23 +456,23 @@ export default function DashboardPage() {
             {loading && (
               <div className="h-80 flex items-center justify-center text-gray-500">Loading…</div>
             )}
-            {!loading && chartData.length > 0 && (
+            {!loading && displayData.length > 0 && (
               <>
                 <div className="flex flex-wrap gap-4 mb-4 p-3 bg-gray-50 rounded-xl text-sm">
                   <span className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-orange-500" /> Usage (kWh)
+                    <span className={`w-3 h-3 rounded-full ${mlMode ? 'bg-purple-500' : 'bg-orange-500'}`} /> Usage (kWh)
                   </span>
                   <span className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-red-500" /> Anomaly (|Z| &gt; 2)
+                    <span className="w-3 h-3 rounded-full bg-red-500" /> Anomaly ({mlMode ? 'ML Ensemble' : '|Z| > 2'})
                   </span>
                 </div>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <div className="h-80 w-full min-w-[0px] min-h-[0px]">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                    <AreaChart data={displayData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="usageGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#f97316" stopOpacity={0.4} />
-                          <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
+                          <stop offset="0%" stopColor={mlMode ? '#9333ea' : '#f97316'} stopOpacity={0.4} />
+                          <stop offset="100%" stopColor={mlMode ? '#9333ea' : '#f97316'} stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -397,22 +496,26 @@ export default function DashboardPage() {
                       <Area
                         type="monotone"
                         dataKey="usage"
-                        stroke="#f97316"
+                        stroke={mlMode ? '#9333ea' : '#f97316'}
                         strokeWidth={2}
                         fill="url(#usageGradient)"
                         dot={(props) => {
                           const { cx, cy, payload } = props;
                           if (payload.isAnomaly && typeof cx === 'number' && typeof cy === 'number') {
-                            return <circle cx={cx} cy={cy} r={3} fill="#ef4444" stroke="white" strokeWidth={1.5} />;
+                            return <circle cx={cx} cy={cy} r={4} fill="#ef4444" stroke="white" strokeWidth={1.5} />;
                           }
                           return null;
                         }}
-                        activeDot={{ r: 5, stroke: '#c2410c', strokeWidth: 2 }}
+                        activeDot={{ r: 5, stroke: mlMode ? '#7e22ce' : '#c2410c', strokeWidth: 2 }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">Red dots = statistical anomaly (Z-score &gt; ±2 standard deviations from learned mean).</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  {mlMode
+                    ? 'Red dots = anomaly flagged by ML ensemble (Isolation Forest + Random Forest + Gradient Boosting, 2/3 majority vote).'
+                    : 'Red dots = statistical anomaly (Z-score > ±2 standard deviations from learned mean).'}
+                </p>
               </>
             )}
             {!loading && chartData.length === 0 && (

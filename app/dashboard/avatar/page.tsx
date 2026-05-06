@@ -38,7 +38,7 @@ import { Download, AlertTriangle, Phone, X, ShieldAlert } from 'lucide-react';
 // ─── Types ───────────────────────────────────────────────────────────
 
 interface SentimentData {
-  sentiment: string;     // 'happy' | 'neutral' | 'sad' | 'distressed'
+  sentiment: string;     // 'happy' | 'neutral' | 'sad' | 'distressed' | 'crisis'
   score: number;         // 1-10 scale
   explanation: string;   // Human-readable explanation
   concerns: {            // Elderly-specific concerns detected
@@ -67,6 +67,7 @@ interface CrisisAlert {
 
 export default function AvatarPage() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // ── Smart SOS State ──────────────────────────────────────────────
@@ -84,12 +85,15 @@ export default function AvatarPage() {
         console.error("Failed to parse messages from localStorage", e);
       }
     }
+    setIsLoaded(true);
   }, []);
 
   // ─── Save messages to localStorage whenever they change ──────────
   useEffect(() => {
-    localStorage.setItem('avatar_messages', JSON.stringify(messages));
-  }, [messages]);
+    if (isLoaded) {
+      localStorage.setItem('avatar_messages', JSON.stringify(messages));
+    }
+  }, [messages, isLoaded]);
 
   // ─── Auto-scroll the log to the bottom ───────────────────────────
   useEffect(() => {
@@ -308,7 +312,7 @@ ${allConcerns.length > 0
       const date = new Date(msg.timestamp).toLocaleString();
       const speaker = msg.role === 'user' ? 'Me' : 'Companion';
       const sentimentTag = msg.sentiment
-        ? ` (${msg.sentiment.sentiment === 'happy' ? '😊' : msg.sentiment.sentiment === 'sad' ? '😢' : msg.sentiment.sentiment === 'distressed' ? '😰' : '😐'} ${msg.sentiment.sentiment}, ${msg.sentiment.score}/10)`
+        ? ` (${msg.sentiment.sentiment === 'happy' ? '😊' : msg.sentiment.sentiment === 'sad' ? '😢' : msg.sentiment.sentiment === 'distressed' ? '😰' : msg.sentiment.sentiment === 'crisis' ? '🚨' : '😐'} ${msg.sentiment.sentiment}, ${msg.sentiment.score}/10)`
         : '';
       return `[${date}] ${speaker}: ${msg.text}${sentimentTag}`;
     }).join('\n\n');
@@ -479,7 +483,8 @@ ${transcript}
                         <span>
                           {msg.sentiment.sentiment === 'happy' ? '😊' :
                             msg.sentiment.sentiment === 'neutral' ? '😐' :
-                              msg.sentiment.sentiment === 'sad' ? '😢' : '😰'}{' '}
+                              msg.sentiment.sentiment === 'sad' ? '😢' :
+                                msg.sentiment.sentiment === 'crisis' ? '🚨' : '😰'}{' '}
                           {msg.sentiment.score}/10
                         </span>
                         {msg.sentiment.concerns.length > 0 && (
@@ -509,6 +514,7 @@ ${transcript}
             <HumanSathi
               onMessageReceived={handleNewMessage}
               onCrisisDetected={handleCrisisCheck}
+              messages={messages.map(m => ({ role: m.role, text: m.text }))}
             />
           </div>
 

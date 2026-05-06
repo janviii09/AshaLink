@@ -1,5 +1,5 @@
 'use client';
-
+import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 
 /**
@@ -35,6 +35,7 @@ const SENTIMENT_EMOJI: Record<string, string> = {
     neutral: '😐',
     sad: '😢',
     distressed: '😰',
+    crisis: '🚨',
 };
 
 // Custom tooltip that shows detailed info when hovering over a point
@@ -72,6 +73,14 @@ function CustomDot(props: { cx?: number; cy?: number; payload?: MoodDataPoint })
 }
 
 export default function MoodChart({ data }: MoodChartProps) {
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    if (!isMounted) return <div className="h-[200px]" />; // Reserved space
+
     if (data.length === 0) {
         return (
             <div className="text-center py-8 text-gray-400 italic">
@@ -103,8 +112,8 @@ export default function MoodChart({ data }: MoodChartProps) {
                         axisLine={{ stroke: '#e5e7eb' }}
                     />
                     <YAxis
-                        domain={[1, 10]}
-                        ticks={[1, 4, 7, 10]}
+                        domain={[0, 10]}
+                        ticks={[0, 1, 4, 7, 10]}
                         tick={{ fontSize: 11, fill: '#9ca3af' }}
                         tickLine={false}
                         axisLine={{ stroke: '#e5e7eb' }}

@@ -127,6 +127,9 @@ export default function SafetyCenterPage() {
   const [showVolunteerModal, setShowVolunteerModal] = useState(false);
   const [volunteerForm, setVolunteerForm] = useState({ name: '', contactNo: '', skills: [] as string[] });
 
+  // ─── Loading State ────────────────────────────────────────────
+  const [isLoaded, setIsLoaded] = useState(false);
+
   // ═══ Load from localStorage ═══════════════════════════════════
   useEffect(() => {
     const savedNeighbours = localStorage.getItem('community_neighbours');
@@ -150,21 +153,17 @@ export default function SafetyCenterPage() {
         setCaregiverSettings(parsed);
       }
     }
+
+    setIsLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (storedNeighbours.length > 0) localStorage.setItem('community_neighbours', JSON.stringify(storedNeighbours));
-  }, [storedNeighbours]);
-
-  useEffect(() => {
-    if (contacts.length > 0) localStorage.setItem('sos_contacts', JSON.stringify(contacts));
-  }, [contacts]);
-
-  useEffect(() => {
-    if (caregiverSettings.caregivers.length > 0 || caregiverSettings.elderName) {
+    if (isLoaded) {
+      localStorage.setItem('community_neighbours', JSON.stringify(storedNeighbours));
+      localStorage.setItem('sos_contacts', JSON.stringify(contacts));
       localStorage.setItem('caregiver_settings', JSON.stringify(caregiverSettings));
     }
-  }, [caregiverSettings]);
+  }, [storedNeighbours, contacts, caregiverSettings, isLoaded]);
 
   // ═══ Geolocation ══════════════════════════════════════════════
   useEffect(() => {

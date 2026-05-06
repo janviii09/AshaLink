@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Groq from 'groq-sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -26,10 +26,8 @@ import * as path from 'path';
  * - Uses Llama 3 — open source, high quality
  */
 
-// ── Initialize Groq ─────────────────────────────────────────────────────
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+// ── Initialize Gemini ─────────────────────────────────────────────────────
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // ── Knowledge Base (loaded once, cached in memory) ──────────────────────
 interface KnowledgeEntry {
@@ -124,19 +122,18 @@ Your role is to:
 IMPORTANT SAFETY RULES:
 
 1. MEDICAL ADVICE:
-- You must NEVER recommend or prescribe any medicine, drugs, or treatments.
-- If the user asks for medicine, clearly and politely say:
-  "I'm not a doctor, so I cannot recommend medicines. It would be best to consult a qualified doctor for proper advice."
-- Always prioritize safety over giving an answer.
+- You must NEVER recommend or prescribe any medicine, drugs, or treatments (whatever the user asks for).
+- If the user asks for medicine or health advice, clearly and politely say:
+  "I am your companion, not a doctor, so I cannot suggest any medicines. It is very important that you consult a qualified doctor for any medical needs."
+- AFTER saying this, ALWAYS ask: "Would you like me to suggest some simple yoga or breathing exercises instead? They can often help you feel a bit more relaxed."
 
-2. ALTERNATIVE SUPPORT:
-- After refusing medical advice, gently offer helpful alternatives:
-  - Yoga exercises
-  - Breathing techniques
-  - Relaxation methods
-  - Light physical activity
-- Example:
-  "What I can do is suggest some simple yoga or relaxation exercises that may help you feel better."
+2. WELLNESS & YOGA:
+- If the user agrees to exercise, suggest gentle, elderly-safe movements:
+  - Anulom Vilom (Alternate Nostril Breathing)
+  - Bhramari Pranayama (Bee Breathing)
+  - Sukhasana (Simple Sitting Pose)
+  - Gentle neck and shoulder rolls
+- Keep instructions very simple and encouraging.
 
 3. MENTAL HEALTH & DISTRESS:
 - If the user expresses sadness, loneliness, anxiety, or emotional pain:
@@ -234,35 +231,48 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Build conversation history for context
-    const conversationHistory = (history || [])
+    // Build conversation history for context (Gemini expects 'user' and 'model' roles)
+    const formattedHistory = (history || [])
       .slice(-6) // last 6 messages for context
       .map((msg: { role: string; text: string }) => ({
-        role: msg.role === 'user' ? 'user' : 'assistant',
-        content: msg.text,
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.text }],
       }));
 
-    // Step 4: GENERATE — send to Groq (Llama 3)
-    const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'system',
-          content: SYSTEM_PROMPT + nameInstruction + ragContext + crisisInstruction,
-        },
-        ...conversationHistory,
-        {
-          role: 'user',
-          content: message,
-        },
-      ],
-      temperature: crisisResult?.severity === 'critical' ? 0.3 : 0.7, // Less creative for crisis
-      max_tokens: 300,
-      top_p: 0.9,
+    // Step 4: GENERATE — send to Gemini with retry logic
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: SYSTEM_PROMPT + nameInstruction + ragContext + crisisInstruction,
     });
 
+    const chat = model.startChat({
+      history: formattedHistory,
+      generationConfig: {
+        temperature: crisisResult?.severity === 'critical' ? 0.3 : 0.7,
+        topP: 0.9,
+      },
+    });
+
+    // Helper for retry
+    const sendMessageWithRetry = async (msg: string, retries = 3, delay = 3000) => {
+      for (let i = 0; i < retries; i++) {
+        try {
+          return await chat.sendMessage(msg);
+        } catch (err: any) {
+          if ((err.status === 429 || err.status === 503) && i < retries - 1) {
+            console.warn(`Gemini busy (attempt ${i + 1}), retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          throw err;
+        }
+      }
+    };
+
+    const result = await sendMessageWithRetry(message);
+    if (!result) throw new Error("Gemini failed to respond after retries");
     const aiResponse =
-      completion.choices[0]?.message?.content?.trim() ||
+      result.response.text().trim() ||
       "I'm here for you. Please tell me more about how you're feeling.";
 
     // Return response with crisis metadata
@@ -273,12 +283,12 @@ export async function POST(req: NextRequest) {
       // ── Crisis data for frontend SOS integration ──
       crisis: crisisResult
         ? {
-            detected: true,
-            severity: crisisResult.severity,
-            type: crisisResult.type,
-            matchedKeywords: crisisResult.matchedKeywords,
-            message: crisisResult.alertMessage,
-          }
+          detected: true,
+          severity: crisisResult.severity,
+          type: crisisResult.type,
+          matchedKeywords: crisisResult.matchedKeywords,
+          message: crisisResult.alertMessage,
+        }
         : { detected: false },
     });
   } catch (error: unknown) {
@@ -315,41 +325,41 @@ const CRISIS_KEYWORDS: {
   keywords: string[];
   alertMessage: string;
 }[] = [
-  {
-    severity: 'critical',
-    type: 'self-harm / suicidal thoughts',
-    keywords: [
-      'suicide', 'kill myself', 'end my life', 'want to die', 'don\'t want to live',
-      'no reason to live', 'better off dead', 'hurt myself', 'self harm', 'self-harm',
-      'cut myself', 'slit my wrist', 'hang myself', 'overdose', 'jump off',
-      'marna chahta', 'marna chahti', 'mar jana', 'zindagi khatam', 'jeena nahi',
-      'maut', 'khudkushi',
-    ],
-    alertMessage: '🆘 CRITICAL: Your loved one has expressed thoughts of self-harm or suicide during their conversation with Saathi. Please contact them IMMEDIATELY.',
-  },
-  {
-    severity: 'high',
-    type: 'medical emergency',
-    keywords: [
-      'chest pain', 'heart attack', 'can\'t breathe', 'cannot breathe', 'difficulty breathing',
-      'stroke', 'collapsed', 'fell down', 'unconscious', 'bleeding heavily',
-      'severe pain', 'paralysis', 'can\'t move', 'choking', 'seizure',
-      'saans nahi', 'seene mein dard', 'gir gaya', 'gir gayi', 'behosh',
-    ],
-    alertMessage: '🚑 URGENT: Your loved one reported a potential medical emergency during their conversation. Please check on them immediately.',
-  },
-  {
-    severity: 'moderate',
-    type: 'emotional distress',
-    keywords: [
-      'nobody cares', 'completely alone', 'no one loves me', 'abandoned',
-      'can\'t take it anymore', 'giving up', 'hopeless', 'worthless',
-      'burden on everyone', 'burden to my family', 'useless',
-      'koi nahi hai', 'akela', 'akeli', 'koi pyar nahi karta', 'bojh',
-    ],
-    alertMessage: '⚠️ Your loved one is showing signs of emotional distress during their conversation with Saathi. Consider reaching out to them.',
-  },
-];
+    {
+      severity: 'critical',
+      type: 'self-harm / suicidal thoughts',
+      keywords: [
+        'suicide', 'kill myself', 'end my life', 'want to die', 'don\'t want to live',
+        'no reason to live', 'better off dead', 'hurt myself', 'self harm', 'self-harm',
+        'cut myself', 'slit my wrist', 'hang myself', 'overdose', 'jump off',
+        'marna chahta', 'marna chahti', 'mar jana', 'zindagi khatam', 'jeena nahi',
+        'maut', 'khudkushi',
+      ],
+      alertMessage: '🆘 CRITICAL: Your loved one has expressed thoughts of self-harm or suicide during their conversation with Saathi. Please contact them IMMEDIATELY.',
+    },
+    {
+      severity: 'high',
+      type: 'medical emergency',
+      keywords: [
+        'chest pain', 'heart attack', 'can\'t breathe', 'cannot breathe', 'difficulty breathing',
+        'stroke', 'collapsed', 'fell down', 'unconscious', 'bleeding heavily',
+        'severe pain', 'paralysis', 'can\'t move', 'choking', 'seizure',
+        'saans nahi', 'seene mein dard', 'gir gaya', 'gir gayi', 'behosh',
+      ],
+      alertMessage: '🚑 URGENT: Your loved one reported a potential medical emergency during their conversation. Please check on them immediately.',
+    },
+    {
+      severity: 'moderate',
+      type: 'emotional distress',
+      keywords: [
+        'nobody cares', 'completely alone', 'no one loves me', 'abandoned',
+        'can\'t take it anymore', 'giving up', 'hopeless', 'worthless',
+        'burden on everyone', 'burden to my family', 'useless',
+        'koi nahi hai', 'akela', 'akeli', 'koi pyar nahi karta', 'bojh',
+      ],
+      alertMessage: '⚠️ Your loved one is showing signs of emotional distress during their conversation with Saathi. Consider reaching out to them.',
+    },
+  ];
 
 function detectCrisis(message: string): CrisisResult | null {
   const lowerMessage = message.toLowerCase();

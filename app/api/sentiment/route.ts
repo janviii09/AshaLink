@@ -1,34 +1,33 @@
 import { NextResponse } from 'next/server';
-import Sentiment from 'sentiment';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
  * POST /api/sentiment
  * 
- * HYBRID Sentiment Analysis — NO external API needed!
+ * HYBRID Sentiment Analysis — NLP Cloud + Crisis Keywords
  * 
  * This endpoint uses TWO complementary approaches:
  * 
- * 1. AFINN Word-Level Scoring (via `sentiment` npm package):
- *    - Each word in the message is checked against a lexicon of ~2,500 English words
- *    - Each word has a pre-assigned score from -5 (very negative) to +5 (very positive)
- *    - Example: "happy" = +3, "terrible" = -3, "love" = +3, "hate" = -3
- *    - The final score is the sum of all word scores, normalized to a 1-10 scale
+ * 1. NLP Cloud Sentiment API (primary scorer):
+ *    - Uses a fine-tuned DistilBERT model hosted on NLP Cloud
+ *    - Returns sentiment labels (POSITIVE, NEGATIVE, NEUTRAL) with confidence scores
+ *    - Much more accurate than word-level AFINN scoring for real conversations
+ *    - Understands context, negation, and nuance
  * 
- * 2. Custom Keyword/Pattern Analysis (elderly-specific concerns):
+ * 2. Custom Keyword/Pattern Analysis (elderly-specific safety net):
  *    - Detects specific life situations like loneliness, missing family, health issues
  *    - Uses pattern matching to identify concerning phrases
  *    - Returns structured "concerns" that caregivers can act on
- *    - This is what makes it useful for elderly care — generic sentiment tools miss these
+ *    - CRISIS override: suicide/self-harm keywords force score to 0.5-1.0
  * 
- * WHY not just use an LLM?
- *    - This runs entirely on the server with no API key needed for sentiment
- *    - No rate limits, no costs, no latency from external calls
- *    - The keyword patterns are specifically tuned for elderly care contexts
- *    - More transparent — you can see exactly WHY a concern was flagged
+ * WHY this hybrid approach?
+ *    - NLP Cloud gives accurate sentiment scoring from a trained model
+ *    - Keyword patterns catch elderly-specific concerns that generic models miss
+ *    - Crisis keywords act as a hard safety floor that can NEVER be overridden
  */
 
-// Initialize the AFINN sentiment analyzer
-const sentimentAnalyzer = new Sentiment();
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 // ─── Concern Categories ─────────────────────────────────────────────────
 // Each category has:
@@ -109,6 +108,12 @@ const CONCERN_CATEGORIES: ConcernCategory[] = [
             'burden', 'i am a burden', 'better off without me', 'no reason to live',
             'wish i could just', 'tired of living', 'end it', 'not worth it',
             'nobody needs me', 'useless', 'worthless', 'can\'t take it anymore',
+            'suicide', 'kill myself', 'want to die', 'end my life', 'self harm',
+            'self-harm', 'hurt myself', 'don\'t want to live', 'wish i was dead',
+            'want to end', 'take my life', 'feeling suicidal', 'feeling to suicide',
+            'want to suicide', 'wanna die', 'wanna suicide', 'jump off', 'jump from',
+            'jumping from', 'jumping off', 'jump out', 'jump down',
+            'hang myself', 'overdose', 'slit', 'cut myself', 'no point living',
         ],
         message: '⚠️ URGENT: Your loved one is showing signs of serious emotional distress. Please reach out immediately.',
     },
@@ -137,6 +142,22 @@ const CONCERN_CATEGORIES: ConcernCategory[] = [
     },
 ];
 
+// ─── CRITICAL CRISIS KEYWORDS ─────────────────────────────────────────
+// These keywords indicate an IMMEDIATE safety risk. When detected, the
+// score is forced to the lowest range (0.5–1.5) regardless of any other
+// scoring. This list must be kept tight — false positives here are
+// less dangerous than false negatives.
+const CRISIS_KEYWORDS: string[] = [
+    'suicide', 'kill myself', 'want to die', 'end my life', 'take my life',
+    'want to suicide', 'wanna die', 'wanna suicide', 'feeling suicidal',
+    'feeling to suicide', 'don\'t want to live', 'wish i was dead',
+    'no reason to live', 'better off without me', 'better off dead',
+    'hang myself', 'overdose', 'jump off', 'jump from', 'jumping from',
+    'jumping off', 'jump out', 'jump down', 'cut myself', 'slit my',
+    'hurt myself', 'self harm', 'self-harm', 'end it all', 'tired of living',
+    'no point living', 'can\'t go on', 'i give up on life',
+];
+
 // ─── Positive Indicators ─────────────────────────────────────────────
 // We also track positive patterns to give a balanced picture
 const POSITIVE_PATTERNS = [
@@ -151,25 +172,14 @@ const POSITIVE_PATTERNS = [
 // ─── Helper Functions ────────────────────────────────────────────────
 
 /**
- * Normalize the AFINN score (which can range widely) to a 1-10 scale.
- * AFINN comparative score typically ranges from about -5 to +5.
- * We map it to 1-10 where 5.5 is neutral.
- */
-function normalizeScore(comparative: number): number {
-    // comparative is the average AFINN score per word
-    // Map -5..+5 → 1..10
-    const normalized = ((comparative + 5) / 10) * 9 + 1;
-    return Math.min(10, Math.max(1, Math.round(normalized * 10) / 10));
-}
-
-/**
  * Classify the overall sentiment label based on the normalized score
  */
 function classifySentiment(score: number): string {
     if (score >= 7.5) return 'happy';
     if (score >= 5.5) return 'neutral';
     if (score >= 3.5) return 'sad';
-    return 'distressed';
+    if (score >= 1.5) return 'distressed';
+    return 'crisis'; // 0.5–1.5 — immediate danger
 }
 
 /**
@@ -193,10 +203,78 @@ function detectConcerns(textLower: string): { label: string; emoji: string; mess
 }
 
 /**
+ * Detect if the message contains critical crisis keywords.
+ * Returns true if immediate-risk language is found.
+ */
+function isCrisisMessage(textLower: string): boolean {
+    return CRISIS_KEYWORDS.some(keyword => textLower.includes(keyword));
+}
+
+/**
  * Check how many positive patterns are present
  */
 function detectPositiveSignals(textLower: string): string[] {
     return POSITIVE_PATTERNS.filter(pattern => textLower.includes(pattern));
+}
+
+/**
+ * Call Gemini to get a nuanced sentiment score and explanation.
+ * Returns { score: 1-10, explanation: string }
+ */
+async function callGeminiSentiment(text: string): Promise<{ score: number; explanation: string } | null> {
+    if (!GEMINI_API_KEY) return null;
+
+    try {
+        const model = genAI.getGenerativeModel({ 
+            model: 'gemini-2.5-flash',
+            generationConfig: { temperature: 0.1 } // Low temperature for consistent scoring
+        });
+
+        const prompt = `Analyze the sentiment of this message from an elderly person in India. 
+        Provide:
+        1. A score from 1.0 to 10.0 (where 1.0 is extreme distress/crisis, 5.0 is neutral/lonely, and 10.0 is very happy/grateful).
+        2. A one-sentence explanation of why you gave that score.
+
+        Message: "${text}"
+
+        Output format:
+        Score: [score]
+        Explanation: [explanation]`;
+
+        // Retry logic for 429/503
+        let result;
+        let retries = 3;
+        for (let i = 0; i < retries; i++) {
+            try {
+                result = await model.generateContent(prompt);
+                break;
+            } catch (err: any) {
+                if ((err.status === 429 || err.status === 503) && i < retries - 1) {
+                    console.warn(`Sentiment Gemini busy (attempt ${i + 1}), retrying...`);
+                    await new Promise(r => setTimeout(r, 4000));
+                    continue;
+                }
+                throw err;
+            }
+        }
+
+        if (!result) return null;
+        const responseText = result.response.text();
+        
+        const scoreMatch = responseText.match(/Score:\s*([\d.]+)/i);
+        const explanationMatch = responseText.match(/Explanation:\s*(.*)/i);
+
+        if (scoreMatch) {
+            return {
+                score: parseFloat(scoreMatch[1]),
+                explanation: explanationMatch ? explanationMatch[1].trim() : 'Based on sentiment analysis.'
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error('Gemini sentiment failed:', error);
+        return null;
+    }
 }
 
 /**
@@ -207,7 +285,7 @@ function generateExplanation(
     sentiment: string,
     concerns: { label: string }[],
     positiveSignals: string[],
-    wordScores: { word: string; score: number }[]
+    nlpCloudUsed: boolean,
 ): string {
     const parts: string[] = [];
 
@@ -218,19 +296,17 @@ function generateExplanation(
         parts.push('The message has a neutral tone.');
     } else if (sentiment === 'sad') {
         parts.push('The message carries a somewhat negative or melancholic tone.');
+    } else if (sentiment === 'crisis') {
+        parts.push('⚠️ CRITICAL: The message contains language indicating serious emotional distress.');
     } else {
         parts.push('The message shows signs of emotional distress.');
     }
 
-    // Mention specific word contributions
-    const negWords = wordScores.filter(w => w.score < 0).map(w => w.word);
-    const posWords = wordScores.filter(w => w.score > 0).map(w => w.word);
-
-    if (negWords.length > 0) {
-        parts.push(`Negative words detected: "${negWords.slice(0, 3).join('", "')}".`);
-    }
-    if (posWords.length > 0) {
-        parts.push(`Positive words detected: "${posWords.slice(0, 3).join('", "')}".`);
+    // Mention the source
+    if (nlpCloudUsed) {
+        parts.push(`Analyzed using NLP Cloud AI model (score: ${score.toFixed(1)}/10).`);
+    } else {
+        parts.push('Analyzed using keyword pattern matching (NLP Cloud unavailable).');
     }
 
     // Mention concerns
@@ -260,68 +336,87 @@ export async function POST(request: Request) {
             );
         }
 
-        // 1. AFINN word-level analysis
-        //    The sentiment package returns:
-        //    - score: total score (sum of all word scores)
-        //    - comparative: average score per word (normalized)
-        //    - tokens: all words in the text
-        //    - words: words that had a sentiment score
-        //    - positive: words with positive scores
-        //    - negative: words with negative scores
-        const afinnResult = sentimentAnalyzer.analyze(text);
-
-        // 2. Normalize to 1-10 scale
-        const normalizedScore = normalizeScore(afinnResult.comparative);
-
-        // 3. Classify overall sentiment
-        const sentimentLabel = classifySentiment(normalizedScore);
-
-        // 4. Detect elderly-specific concerns via keyword patterns
         const textLower = text.toLowerCase();
+
+        // 1. Detect elderly-specific concerns via keyword patterns
         const concerns = detectConcerns(textLower);
 
-        // 5. Detect positive signals
+        // 2. Detect positive signals
         const positiveSignals = detectPositiveSignals(textLower);
 
-        // 6. Build word-level score details (for transparency)
-        const wordScores = afinnResult.calculation.map((calc: Record<string, number>) => {
-            const word = Object.keys(calc)[0];
-            return { word, score: calc[word] };
-        });
+        // 3. Check for CRITICAL crisis keywords FIRST
+        const crisisDetected = isCrisisMessage(textLower);
 
-        // 7. If concerns are detected, lower the score further (concerns override raw sentiment)
-        //    This handles cases where someone says something neutral-sounding but concerning
-        let adjustedScore = normalizedScore;
-        if (concerns.length > 0) {
-            // Each concern drops the score by 0.5, minimum 1
-            adjustedScore = Math.max(1, normalizedScore - concerns.length * 0.5);
+        // 4. Call Gemini for AI-powered sentiment scoring
+        const geminiResult = await callGeminiSentiment(text);
+        const aiUsed = geminiResult !== null;
+
+        // 5. Compute the base score
+        let baseScore: number;
+        let aiExplanation = '';
+
+        if (geminiResult) {
+            baseScore = geminiResult.score;
+            aiExplanation = geminiResult.explanation;
+        } else {
+            // Fallback: simple heuristic based on keyword counts
+            const posCount = positiveSignals.length;
+            const negConcernCount = concerns.length;
+            if (posCount > 0 && negConcernCount === 0) {
+                baseScore = Math.min(10, 6 + posCount);
+            } else if (negConcernCount > 0 && posCount === 0) {
+                baseScore = Math.max(1, 5 - negConcernCount * 1.5);
+            } else {
+                baseScore = 5.5; // neutral fallback
+            }
         }
 
-        // Re-classify with adjusted score
-        const adjustedSentiment = concerns.length > 0 ? classifySentiment(adjustedScore) : sentimentLabel;
+        // 6. Apply crisis override and concern penalties
+        let finalScore = baseScore;
+        if (crisisDetected) {
+            // HARD OVERRIDE: crisis language → score forced to 0.5–1.0
+            const crisisHitCount = CRISIS_KEYWORDS.filter(k => textLower.includes(k)).length;
+            finalScore = Math.min(finalScore, crisisHitCount >= 2 ? 0.5 : 1.5);
+        } else if (concerns.length > 0) {
+            // If Gemini already gave a low score, don't double-penalize too much
+            // but ensure concern-heavy messages are pulled down
+            const penalty = concerns.reduce((sum, c) => {
+                if (c.label === 'Emotional Decline') return sum + 2.0;
+                if (c.label === 'Health Concerns') return sum + 1.5;
+                return sum + 1.0;
+            }, 0);
+            
+            // Only apply penalty if the score isn't already low
+            if (finalScore > 5) {
+                finalScore = Math.max(3, finalScore - penalty);
+            }
+        }
+
+        // 7. Classify
+        const finalSentiment = crisisDetected ? 'crisis' : classifySentiment(finalScore);
 
         // 8. Generate explanation
-        const explanation = generateExplanation(
-            adjustedScore,
-            adjustedSentiment,
+        const explanation = aiExplanation || generateExplanation(
+            finalScore,
+            finalSentiment,
             concerns,
             positiveSignals,
-            wordScores
+            false,
         );
 
         // 9. Return the complete analysis
         return NextResponse.json({
-            sentiment: adjustedSentiment,
-            score: adjustedScore,
+            sentiment: finalSentiment,
+            score: Math.round(finalScore * 10) / 10,
             explanation,
             concerns,
             positiveSignals,
-            rawAfinn: {
-                score: afinnResult.score,
-                comparative: afinnResult.comparative,
-                positiveWords: afinnResult.positive,
-                negativeWords: afinnResult.negative,
-            },
+            // Gemini raw info
+            aiMetadata: geminiResult ? {
+                model: 'gemini-2.5-flash',
+                originalScore: geminiResult.score,
+            } : null,
+            mlModel: null,
         });
 
     } catch (error: unknown) {

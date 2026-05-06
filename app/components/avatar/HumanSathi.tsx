@@ -1,7 +1,7 @@
 'use client';
-
 import { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Volume2, Loader2, Video } from 'lucide-react';
+import StreamingAvatar, { AvatarQuality } from '@heygen/streaming-avatar';
 
 /**
  * HumanSathi — RAG-Powered Voice AI Companion
@@ -28,12 +28,10 @@ import { Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
 interface HumanSathiProps {
   onMessageReceived: (role: 'user' | 'ai', text: string) => void;
   onCrisisDetected?: (crisis: { detected: boolean; severity?: string; type?: string; matchedKeywords?: string[]; message?: string }) => void;
+  messages: { role: string; text: string }[];
 }
 
-// Store conversation history for context
-const conversationHistory: { role: string; text: string }[] = [];
-
-export default function HumanSathi({ onMessageReceived, onCrisisDetected }: HumanSathiProps) {
+export default function HumanSathi({ onMessageReceived, onCrisisDetected, messages }: HumanSathiProps) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -43,6 +41,12 @@ export default function HumanSathi({ onMessageReceived, onCrisisDetected }: Huma
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // ── LiveAvatar State ───────────────────────────────────────────
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [heygenLoading, setHeygenLoading] = useState(false);
+  const avatarRef = useRef<StreamingAvatar | null>(null);
 
   // ── Setup Web Speech API ──────────────────────────────────────────
   useEffect(() => {
@@ -88,7 +92,7 @@ export default function HumanSathi({ onMessageReceived, onCrisisDetected }: Huma
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.error('Speech recognition error:', event.error);
+      console.warn('Speech recognition error:', event.error);
       setIsListening(false);
       setStatus('idle');
 
@@ -98,6 +102,8 @@ export default function HumanSathi({ onMessageReceived, onCrisisDetected }: Huma
       } else if (event.error === 'no-speech') {
         // User didn't say anything — not an error, just try again
         setMicError(null);
+      } else if (event.error === 'network') {
+        setMicError('Speech recognition network error. Please check your internet connection or use Chrome.');
       } else {
         setMicError(`Microphone error: ${event.error}. Please try again.`);
       }
@@ -107,15 +113,51 @@ export default function HumanSathi({ onMessageReceived, onCrisisDetected }: Huma
 
     return () => {
       recognition.abort();
+      if (avatarRef.current) {
+        avatarRef.current.stopAvatar();
+      }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── LiveAvatar Session Management ───────────────────────────────
+  const startAvatarSession = async () => {
+    if (stream) return;
+    setHeygenLoading(true);
+    try {
+      const res = await fetch('/api/heygen', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to get token');
+
+      const token = data.token;
+      avatarRef.current = new StreamingAvatar({ token });
+
+      await avatarRef.current.createStartAvatar({
+        quality: AvatarQuality.Medium,
+        avatarName: "3c90c3cc-0d44-4b50-8888-8dd25736052a",
+      });
+
+      if (avatarRef.current.mediaStream) {
+        setStream(avatarRef.current.mediaStream);
+      }
+    } catch (error) {
+      console.error("LiveAvatar failed:", error);
+      alert("Note: To enable the visual avatar, please ensure you have updated your HEYGEN_API_KEY in .env.local to a new LiveAvatar key from app.liveavatar.com.");
+    } finally {
+      setHeygenLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
 
   // ── Handle User Message (RAG + TTS pipeline) ─────────────────────
   const handleUserMessage = async (text: string) => {
     // 1. Show user message in transcript
     onMessageReceived('user', text);
-    conversationHistory.push({ role: 'user', text });
 
     setIsProcessing(true);
     setStatus('thinking');
@@ -127,7 +169,7 @@ export default function HumanSathi({ onMessageReceived, onCrisisDetected }: Huma
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
-          history: conversationHistory.slice(-6),
+          history: messages.slice(-6),
           userName: typeof window !== 'undefined' ? localStorage.getItem('elder_name') || '' : '',
         }),
       });
@@ -139,17 +181,33 @@ export default function HumanSathi({ onMessageReceived, onCrisisDetected }: Huma
 
       // 3. Show AI message in transcript
       onMessageReceived('ai', aiText);
-      conversationHistory.push({ role: 'ai', text: aiText });
 
       // 3b. Check for crisis (Smart SOS)
       if (ragData.crisis && onCrisisDetected) {
         onCrisisDetected(ragData.crisis);
       }
 
-      // 4. Convert to speech via ElevenLabs TTS
+      // 4. Convert to speech
       setStatus('speaking');
       setIsSpeaking(true);
 
+      // If Visual Avatar is active, use its speak method
+      if (avatarRef.current && stream) {
+        try {
+          await avatarRef.current.speak({ text: aiText });
+          // Simulation of speaking state duration
+          const duration = Math.max(2000, aiText.length * 85);
+          setTimeout(() => {
+            setIsSpeaking(false);
+            setStatus('idle');
+          }, duration);
+          return;
+        } catch (e) {
+          console.error("Avatar speak failed, falling back to audio-only:", e);
+        }
+      }
+
+      // Fallback: ElevenLabs TTS
       const ttsResponse = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -191,9 +249,18 @@ export default function HumanSathi({ onMessageReceived, onCrisisDetected }: Huma
   };
 
   // ── Start/Stop Listening ──────────────────────────────────────────
-  const startListening = () => {
+  const startListening = async () => {
     if (!recognitionRef.current) {
       alert('Speech recognition is not supported in your browser. Please use Chrome.');
+      return;
+    }
+
+    try {
+      // Pre-request microphone permission to ensure a prompt is shown and handled correctly
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      console.warn('Microphone permission denied during getUserMedia:', err);
+      setMicError('Microphone access was denied. Please allow microphone permission in your browser settings, then try again.');
       return;
     }
 
@@ -207,7 +274,19 @@ export default function HumanSathi({ onMessageReceived, onCrisisDetected }: Huma
     setStatus('listening');
     setInterimText('');
     setMicError(null); // Clear any previous error
-    recognitionRef.current.start();
+
+    try {
+      recognitionRef.current.start();
+    } catch (e: any) {
+      console.warn('Speech recognition start failed:', e);
+      if (e.name === 'NotAllowedError') {
+        setMicError('Microphone access was denied. Please check your browser settings.');
+      } else {
+        setMicError('Failed to start microphone. Please try again.');
+      }
+      setIsListening(false);
+      setStatus('idle');
+    }
   };
 
   const stopListening = () => {
@@ -239,29 +318,43 @@ export default function HumanSathi({ onMessageReceived, onCrisisDetected }: Huma
         {isActive && (
           <div className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-30"></div>
         )}
-        <div className={`w-64 h-64 rounded-full border-8 transition-all duration-700 shadow-inner overflow-hidden ${
-          isActive ? 'border-blue-500 scale-105' : 'border-gray-100'
-        }`}>
-          <img
-            src="/elderly-saathi.png" // Use a friendly, smiling elder advisor image
-            alt="Support Companion"
-            className="w-full h-full object-cover"
-          />
+        <div className={`w-64 h-64 rounded-full border-8 transition-all duration-700 shadow-inner overflow-hidden relative bg-slate-900 ${isActive ? 'border-blue-500 scale-105' : 'border-gray-100'
+          }`}>
+          {stream ? (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img
+              src="/elderly-saathi.png"
+              alt="Support Companion"
+              className="w-full h-full object-cover opacity-90"
+            />
+          )}
+
+          {heygenLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+              <Loader2 className="text-white w-10 h-10 animate-spin" />
+            </div>
+          )}
         </div>
 
         {/* Animated Sound Wave when AI speaks */}
         {isSpeaking && (
           <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex gap-2 items-center bg-blue-600 px-4 py-2 rounded-full shadow-lg">
-             <Volume2 className="text-white w-5 h-5 animate-pulse" />
-             <span className="text-white font-bold text-sm uppercase tracking-widest">Speaking</span>
+            <Volume2 className="text-white w-5 h-5 animate-pulse" />
+            <span className="text-white font-bold text-sm uppercase tracking-widest">Speaking</span>
           </div>
         )}
 
         {/* Thinking indicator */}
         {isProcessing && !isSpeaking && (
           <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex gap-2 items-center bg-yellow-500 px-4 py-2 rounded-full shadow-lg">
-             <Loader2 className="text-white w-5 h-5 animate-spin" />
-             <span className="text-white font-bold text-sm uppercase tracking-widest">Thinking</span>
+            <Loader2 className="text-white w-5 h-5 animate-spin" />
+            <span className="text-white font-bold text-sm uppercase tracking-widest">Thinking</span>
           </div>
         )}
       </div>
@@ -280,17 +373,30 @@ export default function HumanSathi({ onMessageReceived, onCrisisDetected }: Huma
         </div>
       </div>
 
+      {!stream && (
+        <button
+          onClick={startAvatarSession}
+          disabled={heygenLoading}
+          className="mb-6 flex items-center gap-2 text-indigo-600 font-bold hover:text-indigo-800 transition-all py-3 px-6 rounded-2xl bg-indigo-50 border-2 border-indigo-100 hover:border-indigo-300 shadow-sm"
+        >
+          {heygenLoading ? (
+            <><Loader2 size={20} className="animate-spin" /> Starting Avatar...</>
+          ) : (
+            <><Video size={22} /> Enable Speaking Avatar</>
+          )}
+        </button>
+      )}
+
       {/* Extra-Large Accessible Button */}
       <button
         onClick={isListening ? stopListening : startListening}
         disabled={isProcessing}
-        className={`w-full py-8 rounded-[30px] font-black text-2xl shadow-2xl flex items-center justify-center gap-4 transition-transform active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed ${
-          isListening
+        className={`w-full py-8 rounded-[30px] font-black text-2xl shadow-2xl flex items-center justify-center gap-4 transition-transform active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed ${isListening
           ? 'bg-red-500 hover:bg-red-600 text-white'
           : isProcessing
-          ? 'bg-gray-400 text-white'
-          : 'bg-blue-600 hover:bg-blue-700 text-white'
-        }`}
+            ? 'bg-gray-400 text-white'
+            : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
       >
         {isListening ? (
           <><MicOff size={40} /> Stop Talking</>

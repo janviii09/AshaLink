@@ -43,3 +43,5 @@ next-env.d.ts
 
 .env.local
 implementation_plan.md.resolved
+PROJECT_KNOWLEDGE_BASE.md
+MINOR_PROJECT_REPORT.md
