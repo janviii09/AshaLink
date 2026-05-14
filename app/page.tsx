@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import Hero from './components/Hero';
-import ProblemStatement from './components/ProblemStatement';
-import CompetitiveEdge from './components/CompetitiveEdge';
-import Features from './components/Features';
-import CallToAction from './components/CallToAction';
-import Footer from './components/Footer';
-import Navbar from './components/Navbar';
-import LoginModal from './components/LoginModal';
+import Hero from './components/landing/Hero';
+import ProblemStatement from './components/landing/ProblemStatement';
+import CompetitiveEdge from './components/landing/CompetitiveEdge';
+import Features from './components/landing/Features';
+import CallToAction from './components/landing/CallToAction';
+import Footer from './components/layout/Footer';
+import Navbar from './components/layout/Navbar';
+import LoginModal from './components/layout/LoginModal';
 
 export default function Home() {
   const [loginModalOpen, setLoginModalOpen] = useState(false);

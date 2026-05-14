@@ -9,7 +9,7 @@ import {
   Heart, Zap, Pill, Brain, TrendingUp, TrendingDown, Minus,
   AlertTriangle, CheckCircle, BellOff, Bell, Download, Users,
 } from 'lucide-react';
-import HealthAlerts from '../../components/HealthAlerts';
+import HealthAlerts from '../../components/dashboard/HealthAlerts';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -306,7 +306,7 @@ export default function CaregiverDashboardPage() {
             {moodData.length > 0 ? (
               <>
                 <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <LineChart data={moodData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#9ca3af" />
@@ -358,7 +358,7 @@ export default function CaregiverDashboardPage() {
             {anomalyData.length > 0 ? (
               <>
                 <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <BarChart data={anomalyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                       <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#9ca3af" />

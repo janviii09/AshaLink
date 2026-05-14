@@ -1,8 +1,7 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  experimental: {
-    // Add any experimental features you need
-  },
-}
+import type { NextConfig } from 'next';
 
-module.exports = nextConfig
+const nextConfig: NextConfig = {
+  serverExternalPackages: ['twilio'],
+};
+
+export default nextConfig;

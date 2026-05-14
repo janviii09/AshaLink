@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import HumanSathi from '@/app/components/avatar/HumanSathi';
-import RagChat from '@/app/components/RagChat';
-import MoodChart from '@/app/components/MoodChart';
-import SeedDemoData from '@/app/components/SeedDemoData';
+import HumanSathi from '@/app/components/companion/HumanSathi';
+import RagChat from '@/app/components/companion/RagChat';
+import MoodChart from '@/app/components/dashboard/MoodChart';
+import SeedDemoData from '@/app/components/dashboard/SeedDemoData';
 import { Download, AlertTriangle, Phone, X, ShieldAlert } from 'lucide-react';
 
 /**
@@ -129,13 +129,18 @@ export default function AvatarPage() {
    *  When critical keywords are detected (suicide, chest pain, etc.),
    *  it automatically sends SMS alerts to the caregiver via Twilio."
    */
-  const handleCrisisCheck = useCallback(async (crisis: CrisisAlert) => {
+  const handleCrisisCheck = useCallback(async (crisis: { detected: boolean; severity?: string; type?: string; matchedKeywords?: string[]; message?: string }) => {
     if (!crisis.detected) return;
 
-    setCrisisAlert(crisis);
+    const typedCrisis: CrisisAlert = {
+      ...crisis,
+      severity: crisis.severity as CrisisAlert['severity'],
+    };
+
+    setCrisisAlert(typedCrisis);
 
     // Auto-trigger SOS for critical and high severity
-    if ((crisis.severity === 'critical' || crisis.severity === 'high') && !sosTriggered) {
+    if ((typedCrisis.severity === 'critical' || typedCrisis.severity === 'high') && !sosTriggered) {
       setSosSending(true);
       try {
         // Get caregiver phone from localStorage (set in caregiver page)
@@ -150,14 +155,14 @@ export default function AvatarPage() {
             body: JSON.stringify({
               caregiverPhone,
               elderName: localStorage.getItem('elder_name') || 'Your loved one',
-              eventType: crisis.severity === 'critical' ? 'emergency' : 'mood_alert',
-              details: `Saathi AI detected: ${crisis.type}. Keywords: ${crisis.matchedKeywords?.join(', ')}`,
+              eventType: typedCrisis.severity === 'critical' ? 'emergency' : 'mood_alert',
+              details: `Saathi AI detected: ${typedCrisis.type}. Keywords: ${typedCrisis.matchedKeywords?.join(', ')}`,
             }),
           });
         }
 
         // 2. Trigger full SOS (call + SMS) for critical cases
-        if (crisis.severity === 'critical' && emergencyContacts.length > 0) {
+        if (typedCrisis.severity === 'critical' && emergencyContacts.length > 0) {
           const phoneNumbers = emergencyContacts.map((c: { phone: string }) => c.phone).filter(Boolean);
           if (phoneNumbers.length > 0) {
             await fetch('/api/sos', {
@@ -169,7 +174,7 @@ export default function AvatarPage() {
         }
 
         setSosTriggered(true);
-        console.log('🚨 Smart SOS triggered:', crisis);
+        console.log('🚨 Smart SOS triggered:', typedCrisis);
       } catch (error) {
         console.error('Failed to send SOS:', error);
       } finally {

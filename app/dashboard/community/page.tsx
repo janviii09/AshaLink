@@ -7,9 +7,9 @@ import {
   ShieldCheck, Heart, ShoppingCart, Stethoscope, MessageCircle, Phone, Bell, UserPlus, Volume2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { NeighbourPoint } from '../../components/NeighbourMap';
+import type { NeighbourPoint } from '../../components/community/NeighbourMap';
 
-const NeighbourMap = dynamic(() => import('../../components/NeighbourMap'), {
+const NeighbourMap = dynamic(() => import('../../components/community/NeighbourMap'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-[480px] rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center">

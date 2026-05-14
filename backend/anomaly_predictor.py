@@ -21,8 +21,8 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-# Path to saved models directory (relative to this file's parent)
-MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "saved_models")
+# Path to saved models directory (inside backend/models/anomaly/)
+MODELS_DIR = os.path.join(os.path.dirname(__file__), "models", "anomaly")
 
 
 class AnomalyPredictor:

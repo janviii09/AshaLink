@@ -22,9 +22,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ElevenLabs API key not configured' }, { status: 500 });
     }
 
-    // Use "Rachel" voice — warm, friendly female voice (good for elderly companion)
-    // You can change this voice ID to any voice from your ElevenLabs account
-    const VOICE_ID = 'XrExE9yKIg1WjnnlVkGX'; // Rachel — warm and caring
+    // Use "Aditi" — High-quality Hindi Female voice
+    const VOICE_ID = 'ThT5KcBej9BAsBnd9mYn'; 
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
@@ -48,9 +47,12 @@ export async function POST(req: NextRequest) {
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error('ElevenLabs TTS error:', error);
-      return NextResponse.json({ error: 'TTS failed' }, { status: 500 });
+      const errorDetail = await response.json();
+      console.error('ElevenLabs TTS Error Detail:', JSON.stringify(errorDetail, null, 2));
+      return NextResponse.json({
+        error: 'TTS failed',
+        details: errorDetail.detail?.message || errorDetail.message || 'Unknown ElevenLabs error'
+      }, { status: response.status });
     }
 
     // Stream the audio back to the client

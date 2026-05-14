@@ -228,7 +228,7 @@
       <div class="card">
         <div class="stat">12</div>
         <div class="label">Next.js API routes</div>
-        <p class="small">Voice, RAG, sentiment, SOS, medicine AI, transcription, caregiver alerts, and ML proxy routes.</p>
+        <p class="small">Voice, RAG, SOS, medicine AI, transcription, caregiver alerts, and ML proxy routes.</p>
       </div>
       <div class="card">
         <div class="stat">5,699</div>
@@ -239,8 +239,8 @@
 
     <h3>What the project does</h3>
     <ul>
-      <li>Monitors electricity usage as a non-intrusive signal for daily routine changes.</li>
-      <li>Provides Saathi, an AI companion with chat, voice, mood scoring, crisis detection, and report downloads.</li>
+      <li>Monitors electricity usage as a non-intrusive signal for daily routine changes, supported by an ESP32 hardware prototype.</li>
+      <li>Provides Saathi, an AI companion with chat, voice, GoEmotions-based mood trend analysis, crisis detection, and report downloads.</li>
       <li>Supports medicine CRUD, AI medicine identification, local OCR, reminders, and medicine-specific RAG Q&A.</li>
       <li>Manages SOS contacts, Twilio calls/SMS, live location sharing, volunteers, and neighborhood help simulation.</li>
       <li>Aggregates caregiver insights from local mood, anomaly, medicine, and health-keyword data.</li>
@@ -282,7 +282,7 @@
       <tr><td>Landing experience</td><td>Product introduction, login modal, feature sections, CTA.</td><td><code>app/page.tsx</code>, <code>Hero.tsx</code>, <code>Features.tsx</code>, <code>CompetitiveEdge.tsx</code></td></tr>
       <tr><td>Dashboard shell</td><td>Shared dashboard navigation and route layout.</td><td><code>app/dashboard/layout.tsx</code>, <code>DashboardNavbar.tsx</code></td></tr>
       <tr><td>Monitoring</td><td>Electricity charting, Z-score detection, adaptive hourly thresholds, ML toggle.</td><td><code>app/dashboard/page.tsx</code>, <code>public/test_data.csv</code></td></tr>
-      <tr><td>AI companion</td><td>Voice avatar, text RAG chat, sentiment analysis, mood chart, reports, Smart SOS.</td><td><code>app/dashboard/avatar/page.tsx</code>, <code>HumanSathi.tsx</code>, <code>RagChat.tsx</code>, <code>MoodChart.tsx</code></td></tr>
+      <tr><td>AI companion</td><td>Voice avatar, text RAG chat, GoEmotions-based mood trend analysis, reports, Smart SOS.</td><td><code>app/dashboard/avatar/page.tsx</code>, <code>HumanSathi.tsx</code>, <code>RagChat.tsx</code>, <code>MoodChart.tsx</code></td></tr>
       <tr><td>Medicines</td><td>Medicine records, camera upload, cloud AI scan, local OCR, RAG answers, reminders.</td><td><code>app/dashboard/medicines/page.tsx</code>, <code>medicine-identify</code>, <code>medicine-rag</code></td></tr>
       <tr><td>Safety and caregiver</td><td>SOS, neighbors, volunteers, location sharing, caregiver summary and downloads.</td><td><code>community/page.tsx</code>, <code>caregiver/page.tsx</code>, <code>HealthAlerts.tsx</code></td></tr>
     </table>
@@ -302,7 +302,7 @@
     <h3>API surface</h3>
     <ul>
       <li><code>/api/rag-chat</code>: loads the counseling knowledge base, retrieves similar conversations, applies crisis detection, and generates the Saathi response through Gemini.</li>
-      <li><code>/api/sentiment</code>: Gemini-based mood scoring with elderly-specific keyword penalties and crisis overrides.</li>
+      <li>Mood trend analysis: GoEmotions-trained classifiers produce emotion labels and well-being scores used by the companion and caregiver charts.</li>
       <li><code>/api/medicine-identify</code> and <code>/api/medicine-rag</code>: Groq Vision and Groq LLM medicine workflows.</li>
       <li><code>/api/sos</code>, <code>/api/sos-location</code>, <code>/api/notify-caregiver</code>: Twilio voice/SMS emergency and caregiver notifications.</li>
       <li><code>/api/transcribe</code> and <code>/api/tts</code>: Groq Whisper and ElevenLabs speech support.</li>
@@ -329,14 +329,24 @@
       <li>The UI explains peak usage, anomaly counts, date span, and whether adaptive or fallback thresholds are active.</li>
     </ul>
 
+    <h3>Hardware prototype</h3>
+    <p>
+      The physical monitoring layer uses an <code>ESP32</code> development board on a breadboard with jumper wires, resistors, an OLED display module, a relay/driver module, a DC cooling fan, and a cardboard base. The Arduino sketch reads voltage from pin <code>34</code> through a divider and current from pin <code>35</code> using calibrated current-sensor values, then calculates power and accumulated energy.
+    </p>
+    <ul>
+      <li>The OLED shows live voltage, current, power, and energy every second.</li>
+      <li>The serial output prints the same readings for debugging and data capture.</li>
+      <li>The relay/driver and fan create a visible load/control demonstration for the energy-monitoring concept.</li>
+    </ul>
+
     <h3>AI companion</h3>
     <p>
-      <code>app/dashboard/avatar/page.tsx</code> coordinates the Saathi companion. It persists messages in <code>avatar_messages</code>, sends user messages for background sentiment analysis, displays mood trends, and reacts to crisis metadata from the RAG route.
+      <code>app/dashboard/avatar/page.tsx</code> coordinates the Saathi companion. It persists messages in <code>avatar_messages</code>, attaches GoEmotions-derived mood signals to user messages, displays mood trends, and reacts to crisis metadata from the RAG route.
     </p>
     <ul>
       <li><code>HumanSathi.tsx</code> provides the voice-oriented companion UI.</li>
       <li><code>RagChat.tsx</code> sends text messages, recent history, and the elder name to the RAG API.</li>
-      <li><code>MoodChart.tsx</code> visualizes sentiment scores on a 1-10 well-being scale.</li>
+      <li><code>MoodChart.tsx</code> visualizes GoEmotions-derived well-being scores on a 1-10 scale.</li>
       <li><code>SeedDemoData.tsx</code> can create realistic sample data for demos and caregiver reports.</li>
     </ul>
 
@@ -375,14 +385,14 @@
       <li>The route accepts recent chat history and a saved user name for personalization.</li>
     </ul>
 
-    <h3>Smart SOS and sentiment</h3>
+    <h3>Smart SOS and mood trends</h3>
     <p>
-      Crisis detection is duplicated in useful ways. The RAG route checks every companion message for critical self-harm, high-severity medical, and moderate emotional distress keywords. The sentiment route separately applies crisis overrides so dangerous language cannot be smoothed away by a neutral model score.
+      Crisis detection is paired with model-based mood trend analysis. The RAG route checks every companion message for critical self-harm, high-severity medical, and moderate emotional distress keywords. The GoEmotions model layer produces emotion labels and well-being scores so dangerous or declining patterns can be surfaced in the dashboard.
     </p>
     <table>
       <tr><th>Layer</th><th>Method</th><th>Output</th></tr>
       <tr><td>RAG crisis detection</td><td>Keyword severity tiers</td><td>Structured crisis metadata returned to the UI</td></tr>
-      <tr><td>Sentiment route</td><td>Gemini scoring plus local keyword modifiers</td><td>Sentiment label, score, explanation, concerns</td></tr>
+      <tr><td>Mood trend model</td><td>GoEmotions-trained classifiers with elderly-care grouping</td><td>Emotion labels, well-being score, concern flags</td></tr>
       <tr><td>Health alerts</td><td>Browser-only keyword category counts</td><td>Normal, attention, or urgent weekly alert category</td></tr>
     </table>
 
@@ -394,7 +404,7 @@
       <li><code>AnomalyPredictor</code> engineers nine features: kWh, cyclical hour/day encodings, weekend flag, rolling mean, rolling standard deviation, and kWh ratio.</li>
       <li>It runs Isolation Forest, Random Forest, and Gradient Boosting, then uses 2-of-3 majority voting.</li>
       <li><code>EmotionPredictor</code> loads TF-IDF, a MultiLabelBinarizer, four one-vs-rest classifiers, and a macro sentiment classifier trained around GoEmotions labels.</li>
-      <li>The emotion API returns primary emotion, detected emotions, top scores, macro sentiment, a well-being score, and elderly-care concern flags.</li>
+      <li>The emotion model returns primary emotion, detected emotions, top scores, macro sentiment, a well-being score, and elderly-care concern flags.</li>
     </ul>
 
     <h3>Saved model inventory</h3>
@@ -415,7 +425,7 @@
     <h3>External integrations</h3>
     <table>
       <tr><th>Service</th><th>Used for</th><th>Routes/components</th></tr>
-      <tr><td>Gemini</td><td>Companion RAG generation and sentiment scoring.</td><td><code>rag-chat</code>, <code>sentiment</code></td></tr>
+      <tr><td>Gemini</td><td>Companion RAG generation.</td><td><code>rag-chat</code></td></tr>
       <tr><td>Groq</td><td>Medicine vision, medicine RAG, and Whisper transcription.</td><td><code>medicine-identify</code>, <code>medicine-rag</code>, <code>transcribe</code></td></tr>
       <tr><td>ElevenLabs</td><td>Text-to-speech and voice cloning.</td><td><code>tts</code>, <code>clone</code></td></tr>
       <tr><td>Twilio</td><td>SOS voice calls, SMS alerts, caregiver notifications, location links.</td><td><code>sos</code>, <code>sos-location</code>, <code>notify-caregiver</code></td></tr>
@@ -425,7 +435,7 @@
 
     <h3>Local data keys</h3>
     <ul>
-      <li><code>avatar_messages</code>: companion transcript and sentiment metadata.</li>
+      <li><code>avatar_messages</code>: companion transcript and GoEmotions-derived mood metadata.</li>
       <li><code>electricity_history</code>: recent hourly electricity readings for adaptive thresholding.</li>
       <li><code>user_medicines</code> and <code>medicine_reminders</code>: medicine records and reminder toggles.</li>
       <li><code>sos_contacts</code>, <code>community_neighbours</code>, and <code>caregiver_settings</code>: safety contacts, local support network, and caregiver settings.</li>
@@ -457,7 +467,7 @@
       <li>Clear separation between dashboard modules, API integrations, and Python model inference.</li>
       <li>Strong demo value: seeded data, charts, maps, voice, OCR, medicine AI, SOS, and downloadable reports.</li>
       <li>Good algorithm explainability: Z-score thresholds, Haversine distance, local keyword dictionaries, model majority voting, and RAG source display.</li>
-      <li>Privacy-aware implementation choices, especially local OCR, local sentiment/keyword scanning patterns, and browser persistence.</li>
+      <li>Privacy-aware implementation choices, especially local OCR, GoEmotions mood modeling, health keyword scanning patterns, and browser persistence.</li>
     </ul>
 
     <h3>Important risks</h3>
@@ -481,7 +491,7 @@
 
     <h3>One-paragraph conclusion</h3>
     <p>
-      AshaLink is a substantial elderly-care prototype with real product thinking behind it. The codebase demonstrates multiple assistive-care pillars: passive routine monitoring, companion conversation, medicine support, emergency escalation, community assistance, and caregiver reporting. Its strongest technical story is the blend of explainable local logic with cloud AI and local ML inference. With secret cleanup, authentication, stronger tests, and some modular refactoring, it can move from a feature-rich demo toward a safer and more maintainable care platform.
+      AshaLink is a substantial elderly-care prototype with real product thinking behind it. The project demonstrates multiple assistive-care pillars: ESP32-based activity sensing, companion conversation, medicine support, emergency escalation, community assistance, and caregiver reporting. Its strongest technical story is the blend of physical energy monitoring, explainable local logic, cloud AI, and local ML inference. With secret cleanup, authentication, stronger tests, and some modular refactoring, it can move from a feature-rich demo toward a safer and more maintainable care platform.
     </p>
 
     <div class="grid three" style="margin-top: 16px;">
@@ -491,7 +501,7 @@
       </div>
       <div class="card">
         <div class="label">Best technical highlight</div>
-        <p class="small">Compare Z-score anomaly detection with the FastAPI ML ensemble and explain why both are useful.</p>
+        <p class="small">Show the ESP32 power monitor, then compare Z-score anomaly detection with the FastAPI ML ensemble.</p>
       </div>
       <div class="card">
         <div class="label">Best privacy highlight</div>

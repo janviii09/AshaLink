@@ -29,7 +29,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "saved_models_goemotion")
+MODELS_DIR = os.path.join(os.path.dirname(__file__), "models", "emotion")
 
 # Emotions grouped for elderly care relevance
 ELDERLY_CARE_GROUPS = {

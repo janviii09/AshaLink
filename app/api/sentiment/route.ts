@@ -225,7 +225,7 @@ async function callGeminiSentiment(text: string): Promise<{ score: number; expla
     if (!GEMINI_API_KEY) return null;
 
     try {
-        const model = genAI.getGenerativeModel({ 
+        const model = genAI.getGenerativeModel({
             model: 'gemini-2.5-flash',
             generationConfig: { temperature: 0.1 } // Low temperature for consistent scoring
         });
@@ -260,7 +260,7 @@ async function callGeminiSentiment(text: string): Promise<{ score: number; expla
 
         if (!result) return null;
         const responseText = result.response.text();
-        
+
         const scoreMatch = responseText.match(/Score:\s*([\d.]+)/i);
         const explanationMatch = responseText.match(/Explanation:\s*(.*)/i);
 
@@ -385,7 +385,7 @@ export async function POST(request: Request) {
                 if (c.label === 'Health Concerns') return sum + 1.5;
                 return sum + 1.0;
             }, 0);
-            
+
             // Only apply penalty if the score isn't already low
             if (finalScore > 5) {
                 finalScore = Math.max(3, finalScore - penalty);

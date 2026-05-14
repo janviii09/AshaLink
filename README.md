@@ -1,62 +1,42 @@
-# 🔗 AshaLink — AI-Powered Elderly Care Platform
+# 🔗 AshaLink — AI-Powered Elderly Care Platform (2026 Edition)
 
-An intelligent elderly care companion built with **Next.js 16**, combining **AI companionship**, **statistical anomaly detection**, **medicine OCR**, **community safety**, and **caregiver dashboards** to help families monitor and support their loved ones — with privacy at the core.
+An advanced, real-time elderly care companion built with **Next.js 16**, featuring **LiveAvatar WebRTC video streaming**, **ML Ensemble anomaly detection**, **RAG-powered intelligence**, and **privacy-first medical monitoring**.
 
 ---
 
-## ✨ Features
+## 🌟 2026 Key Innovations
 
-### 🏠 Smart Activity Monitoring (NILM-Based)
-- Electricity usage tracking as a proxy for daily routines (Non-Intrusive Load Monitoring)
-- **Z-score statistical anomaly detection** — computes per-hour mean (μ) and standard deviation (σ) from historical data; flags readings where |Z-score| > 2 (~95% confidence)
-- **Adaptive routine learning** — thresholds automatically evolve as more data is collected; falls back to hardcoded ranges when < 3 data points exist per hour
-- Collapsible "Learned Thresholds" table showing computed μ, σ, min, max per hour
-- Interactive Recharts AreaChart with color-coded anomaly markers
+### 🎭 LiveAvatar 2026 — WebRTC Video Companion
+- **Real-time Video Interaction**: Replaced legacy SDKs with a direct **WebRTC / LiveKit** implementation for ultra-low latency (<500ms) video streaming.
+- **Lip-Sync Precision**: Integrated **ElevenLabs Multilingual v2** directly into the video stream for perfect mouth-movement synchronization.
+- **Zero-Failure Voice Fallback**: Implemented a "Fail-Safe" logic that automatically switches from high-end ElevenLabs AI to the **Browser Web Speech API** if API limits or network issues occur.
+- **Bilingual Excellence**: Optimized for **Hindi (Aditi Voice)** and English, ensuring cultural comfort for Indian elderly users.
 
-### 🤖 AI Companion (Saathi) - RAG & TTS Powered
-- **RAG-Powered Conversations**: Built on a knowledge base of 5,699 counseling transcripts, using Groq (Llama 3.3 70B) for empathetic, context-aware responses.
-- **Voice Capabilities**: Uses Web Speech API for transcription and **ElevenLabs TTS** for warm, natural, and bilingual (Hindi/English) speech.
-- **Smart SOS Crisis Detection**: Real-time analysis of chat messages detects self-harm or medical emergencies, automatically triggering Twilio SOS calls/SMS and displaying an emergency banner.
-- **Hybrid Sentiment Analysis** — AFINN-based word scoring + custom elderly-specific keyword patterns.
-- Mood trend chart with color-coded zones (happy / neutral / distressed) and downloadable 7-day Companion Reports.
-- **Demo Data Seeder**: Built-in 1-click seeder to populate 7 days of realistic conversation and mood data for evaluation and demonstrations.
+### 🧠 Gemini 1.5 Flash Intelligence & RAG
+- **Core Intelligence**: Powered by **Google Gemini 1.5 Flash** across all modules (RAG, Sentiment, OCR).
+- **Counseling RAG**: Context-aware companion trained on **5,700+ counseling transcripts**.
+- **Medical Safety Shield**: Proactive refusal of medication advice with empathetic pivots to **elderly-safe yoga (Anulom Vilom, Bhramari)**.
+- **Smart SOS Crisis Detection**: Real-time message scanning for suicide ideation, medical emergencies, or severe distress with automated Twilio escalation.
 
-### 💊 Medicine Management + AI Scanner + RAG
-- Add, edit, delete medicines with timing schedules (Morning/Afternoon/Evening/Night)
-- **Cloud AI Scanner** — upload a photo → Groq Vision API identifies the medicine
-- **🖥️ Local OCR Scanner (Tesseract.js)** — processes images entirely in-browser using WebAssembly; extracts medicine name, dosage (regex pattern matching for mg/ml/mcg), and manufacturer — **zero data sent to any server**
-- **RAG Query Interface** — ask questions about your medicines, answered by Groq LLM using *only* your actual medicine data
-- **Voice input** for medicine queries (MediaRecorder + Groq Whisper)
-- Browser notification reminders for medicine schedules
+### 📊 ML Ensemble Activity Monitoring (NILM)
+- **Advanced Anomaly Detection**: Moved beyond basic Z-scores to a **Triple-Model ML Ensemble**:
+  1. **Isolation Forest**: Detects structural outliers in routine.
+  2. **Random Forest**: Classifies usage patterns against 14-day historical windows.
+  3. **Gradient Boosting**: Predicts expected usage and flags deviations.
+- **14-Day Realistic Dataset**: Pre-seeded high-fidelity electricity data for a professional presentation.
 
-### 🚨 Safety Center (SOS & Community)
-- **One-tap SOS button** triggers **Twilio voice calls** AND **SMS** to all emergency contacts simultaneously
-- Hindi voice message via Amazon Polly (Aditi voice) built into Twilio TwiML
-- **Siren sound generator** (Web Audio API — sawtooth oscillator with LFO modulation)
-- **Instant location sharing** — SMS your live Google Maps GPS link to contacts
-- Add/remove emergency contacts (persisted in localStorage)
-- **Community map** (Leaflet.js) showing neighbours and verified volunteers with Haversine distance calculation
-- **Help request simulation** — Groceries, Medical, Companionship, Emergency (color-coded)
-- **Volunteer signup** with skills (First Aid, Cooking, Driving, etc.)
-- **Caregiver SMS notifications** via Twilio on key events
+### 💊 Intelligent Medication Management
+- **Local OCR (WASM)**: In-browser medicine scanning via **Tesseract.js** (Zero data leaves the device).
+- **Vision AI**: Cloud-based secondary identification via **Gemini 1.5 Flash Vision**.
+- **Compliance Tracking**: Real-time monitoring of medication adherence with caregiver notifications.
 
-### 🧠 Health Keyword Alerts (Local NLP)
-- Scans all AI companion transcripts against **8 keyword dictionaries**: Pain & Discomfort, Sleep Issues, Appetite, Mobility & Falls, Emotional Distress, Loneliness, Confusion & Memory, Medication Mentions
-- Counts keyword frequencies per category across last 7 days
-- Severity classification: Normal (1-2 mentions) / Attention Needed (3-5) / Urgent (6+)
-- Also detects mentions of specific medicines from the user's medicine list
-- **Runs entirely in the browser — no API calls, pure pattern recognition**
+---
 
-### 👨‍👩‍👧 Caregiver Dashboard
-- **Mood Trend Chart** — 7-day LineChart of sentiment scores with alert/good reference lines, trend detection (improving/stable/declining)
-- **Daily Anomaly Count** — BarChart of electricity anomalies per day, color-coded green/amber/red
-- **Medication Compliance** — shows tracked vs untracked medicines with compliance percentage
-- **Health Keyword Alerts** — embedded weekly summary of concerning keywords from conversations
-- **Downloadable Report** — text report aggregating all 4 sections
-
-### 📋 Alerts & Notifications
-- Color-coded alert cards (Critical / Warning / Info / Resolved)
-- Medicine reminders, activity anomalies, companion check-ins
+## 👨‍👩‍👧 Caregiver Dashboard (The Control Center)
+- **Mood Trend Analysis**: 7-day visualization of the user's emotional state using hybrid sentiment scoring.
+- **Activity Anomalies**: Color-coded bar charts showing routine deviations detected by the ML models.
+- **Health Keyword Alerts**: Scans transcripts for **8 health categories** (Pain, Memory, Sleep, etc.) entirely in-browser.
+- **Emergency Management**: Manage contacts, trigger Twilio SOS calls, and track live GPS locations.
 
 ---
 
@@ -64,164 +44,62 @@ An intelligent elderly care companion built with **Next.js 16**, combining **AI 
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
-| **Framework** | Next.js 16 (App Router) | Full-stack React framework |
-| **Language** | TypeScript | Type-safe development |
-| **Styling** | Tailwind CSS 4 | Utility-first CSS |
-| **Charts** | Recharts | AreaChart, LineChart, BarChart |
-| **Maps** | Leaflet.js | Interactive community map |
-| **Animations** | Framer Motion | Smooth UI transitions |
-| **Icons** | Lucide React | Consistent icon set |
-| **AI Voice** | ElevenLabs (WebRTC) | Real-time voice companion |
-| **AI Vision** | Groq API (Llama 3.2 Vision) | Medicine photo identification |
-| **AI LLM** | Groq API (Llama 3.3 70B) | RAG medicine queries |
-| **OCR** | Tesseract.js (WebAssembly) | Local in-browser text extraction |
-| **Sentiment** | `sentiment` npm (AFINN) + custom patterns | Mood analysis |
-| **Phone Calls** | Twilio (Voice API + TwiML) | SOS emergency calls & SMS |
-| **Audio** | Web Audio API | Siren sound generation |
-| **Storage** | localStorage | Client-side, privacy-first persistence |
+| **Framework** | Next.js 16 (App Router) | High-performance React framework |
+| **Video/RTC** | **LiveKit / WebRTC** | Real-time low-latency video streaming |
+| **AI (LLM)** | **Google Gemini 1.5 Flash** | Core intelligence, RAG, and Vision |
+| **AI (Voice)** | **ElevenLabs Multilingual v2** | Professional Hindi/English speech |
+| **ML Engine** | **Scikit-Learn (Python uvicorn)** | Ensemble anomaly detection models |
+| **Charts** | Recharts | Advanced data visualization |
+| **SOS** | Twilio API | Voice calls, SMS, and TwiML Hindi audio |
+| **OCR** | Tesseract.js | In-browser privacy-first text extraction |
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Installation & Setup
 
-### Prerequisites
-- Node.js 18+
-- npm
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/janviii09/AshaLink
-cd apkasaathi
-
-# Install dependencies
-npm install
-```
-
-### Environment Variables
-
-Create a `.env.local` file in the root directory:
+### 1. Environment Configuration
+Create a `.env.local` file with the following keys:
 
 ```env
-# ElevenLabs — Voice companion
+# Gemini Intelligence
+GEMINI_API_KEY=your_google_ai_key
+
+# Voice & Video
 NEXT_PUBLIC_ELEVENLABS_API_KEY=your_elevenlabs_key
+HEYGEN_API_KEY=your_liveavatar_key
 
-# HeyGen — Streaming avatar (optional)
-HEYGEN_API_KEY=your_heygen_key
-
-# Twilio — SOS phone calls & SMS
-TWILIO_ACCOUNT_SID=your_twilio_sid
-TWILIO_AUTH_TOKEN=your_twilio_token
-TWILIO_PHONE_NUMBER=+1XXXXXXXXXX
-
-# Groq — Medicine AI (Vision + LLM + Whisper)
-GROQ_API_KEY=your_groq_key
+# SOS Systems
+TWILIO_ACCOUNT_SID=your_sid
+TWILIO_AUTH_TOKEN=your_token
+TWILIO_PHONE_NUMBER=your_number
 ```
 
-| Variable | Where to get it |
-|----------|----------------|
-| `NEXT_PUBLIC_ELEVENLABS_API_KEY` | [elevenlabs.io](https://elevenlabs.io) |
-| `HEYGEN_API_KEY` | [heygen.com](https://heygen.com) |
-| `TWILIO_ACCOUNT_SID` / `AUTH_TOKEN` / `PHONE_NUMBER` | [console.twilio.com](https://console.twilio.com) |
-| `GROQ_API_KEY` | [console.groq.com](https://console.groq.com) |
-
-### Run
-
+### 2. Launch
 ```bash
+# Install frontend dependencies
+npm install
+
+# Start the frontend
 npm run dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
----
-
-## 📁 Project Structure
-
-```
-app/
-├── api/
-│   ├── clone/route.ts              # ElevenLabs voice cloning
-│   ├── heygen/route.ts             # HeyGen avatar token
-│   ├── medicine-identify/route.ts  # Groq Vision — photo medicine ID
-│   ├── medicine-rag/route.ts       # Groq LLM — RAG medicine queries
-│   ├── notify-caregiver/route.ts   # Twilio SMS to caregiver
-│   ├── rag-chat/route.ts           # RAG pipeline + Smart SOS crisis detection
-│   ├── sentiment/route.ts          # Hybrid sentiment analysis (AFINN + keywords)
-│   ├── sos/route.ts                # Twilio SOS voice calls + SMS
-│   ├── sos-location/route.ts       # SMS GPS location link
-│   ├── transcribe/route.ts         # Groq Whisper — voice-to-text
-│   └── tts/route.ts                # ElevenLabs Text-to-Speech
-├── components/
-│   ├── avatar/
-│   │   └── HumanSathi.tsx          # Voice companion UI (Web Speech + TTS)
-│   ├── DashboardNavbar.tsx         # Dashboard navigation bar
-│   ├── HealthAlerts.tsx            # Keyword-based health alert scanner
-│   ├── LoginModal.tsx              # Login form modal
-│   ├── MoodChart.tsx               # Recharts mood trend chart
-│   ├── RagChat.tsx                 # Text-based companion interface
-│   ├── SeedDemoData.tsx            # 7-day realistic demo data generator
-│   ├── NeighbourMap.tsx            # Leaflet community map
-│   ├── Navbar.tsx                  # Landing page navbar
-│   ├── Hero.tsx                    # Landing hero with Swiper slideshow
-│   ├── Features.tsx                # Feature showcase cards
-│   ├── ProblemStatement.tsx        # Problem context section
-│   ├── CompetitiveEdge.tsx         # Comparison with competitors
-│   ├── CallToAction.tsx            # CTA section
-│   └── Footer.tsx                  # Site footer
-├── dashboard/
-│   ├── layout.tsx                  # Shared dashboard layout + navbar
-│   ├── page.tsx                    # Electricity monitoring (Z-score anomaly detection)
-│   ├── avatar/page.tsx             # AI companion + sentiment + mood chart
-│   ├── caregiver/page.tsx          # Caregiver dashboard (mood + anomalies + meds)
-│   ├── community/page.tsx          # Safety Center (SOS + map + volunteers)
-│   ├── medicines/page.tsx          # Medicine management + OCR + RAG
-│   └── alerts/page.tsx             # Alerts & notifications
-├── layout.tsx                      # Root layout (font, metadata, global CSS)
-└── page.tsx                        # Landing page
+# Start the ML Backend (in /backend folder)
+python3 -m uvicorn main:app --port 8000
 ```
 
 ---
 
-## 🔬 Key Algorithms & Techniques
+## 📁 Key Algorithms
 
-### Retrieval-Augmented Generation (RAG)
-The AI Companion utilizes a customized RAG pipeline with a curated dataset of 5,699 mental health and counseling conversations. It computes similarity scores to fetch the most relevant context before generating empathetic responses via Groq's Llama 3 model.
+### 1. The ML Ensemble (NILM)
+Uses a voting mechanism between **Isolation Forest**, **RF**, and **GBM** to minimize false positives in activity monitoring. It analyzes 24-hour cycles to differentiate between a "late wake-up" and a "potential medical fall."
 
-### Smart SOS Crisis Detection
-A multi-tiered keyword detection engine built into the RAG pipeline. It categorizes distress signals into Critical (self-harm), High (medical emergency), and Moderate (emotional distress), instantly routing actionable alerts to the Caregiver Dashboard and triggering Twilio emergency protocols.
+### 2. Empathy-First RAG
+Utilizes **Cosine Similarity** to retrieve counseling examples, which are then passed to Gemini 1.5 Flash to generate responses that are patient, simple, and culturally respectful (avoiding clinical terms).
 
-### Z-Score Statistical Anomaly Detection
-For each hour (0–23), the system computes mean and standard deviation from historical electricity readings. A reading is flagged as anomalous when `|Z-score| > 2`, meaning it deviates by more than 2 standard deviations — corresponding to ~95% statistical confidence.
-
-### Haversine Formula
-Calculates the great-circle distance between two GPS coordinates on a sphere, used for measuring real-world distance to neighbours on the community map.
-
-### Hybrid Sentiment Analysis
-Combines AFINN lexicon scoring (pre-assigned word sentiment values) with custom keyword pattern matching for elderly-specific concerns. No external API required.
-
-### Tesseract.js OCR
-WebAssembly-compiled Optical Character Recognition running entirely in the browser. Extracts text from medicine packaging images and uses regex patterns to identify dosage and manufacturer info.
-
-### TF-IDF Keyword Extraction
-Health keyword alerts use frequency-based analysis across conversation transcripts, counting how often health-related terms appear in each category over a 7-day window.
-
----
-
-## 🔒 Privacy
-
-- **No server-side storage** — medicines, contacts, chat history, and electricity data stored in `localStorage`
-- **Sentiment analysis runs locally** — no conversations sent to external APIs for mood analysis
-- **Local OCR option** — Tesseract.js processes medicine images in-browser (no data leaves the device)
-- **Electricity monitoring uses patterns** — no cameras or wearables
-- **Health keyword scanning is client-side** — transcript analysis runs entirely in the browser
+### 3. Haversine Community Map
+Calculates real-world distances between the elderly user and verified volunteers for immediate grocery or medical assistance requests.
 
 ---
 
 ## 📄 License
-
-This project is private. All rights reserved.
-
----
-
-Built with ❤️ for elderly care.
+Private Project. All rights reserved. Built with ❤️ for AshaLink.

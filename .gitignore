@@ -32,7 +32,6 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-project_documentation.md.resolved
 
 # vercel
 .vercel
@@ -41,7 +40,32 @@ project_documentation.md.resolved
 *.tsbuildinfo
 next-env.d.ts
 
-.env.local
+# resolved/generated docs
+project_documentation.md.resolved
 implementation_plan.md.resolved
-PROJECT_KNOWLEDGE_BASE.md
 MINOR_PROJECT_REPORT.md
+PROJECT_KNOWLEDGE_BASE.md
+
+# generated reports & outputs (not needed to run the project)
+/reports/
+/outputs/
+
+# scratch / test scripts
+/scratch/
+inspect_model.py
+test_anomaly.py
+test_gemini.js
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# ML model binaries (large files, should not be in git)
+backend/models/anomaly/*.pkl
+backend/models/emotion/*.pkl
+saved_models/
+saved_models_goemotion/
+backend/saved_models/

@@ -6,7 +6,8 @@ import os
 from sklearn.preprocessing import RobustScaler
 from sklearn.ensemble import IsolationForest, RandomForestClassifier, GradientBoostingClassifier
 
-MODELS_DIR = os.path.join(os.path.dirname(__file__), "saved_models")
+# Save to backend/models/anomaly/ — same path anomaly_predictor.py loads from
+MODELS_DIR = os.path.join(os.path.dirname(__file__), "models", "anomaly")
 os.makedirs(MODELS_DIR, exist_ok=True)
 
 # Generate synthetic normal data (similar to test_data.csv but longer)

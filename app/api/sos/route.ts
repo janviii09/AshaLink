@@ -88,15 +88,13 @@ export async function POST(request: Request) {
         const successfulActions = results.filter((r) => r.status === 'fulfilled');
         const failedActions = results.filter((r) => r.status === 'rejected');
 
-        if (successfulActions.length === 0 && failedActions.length > 0) {
-            const firstError = (failedActions[0] as PromiseRejectedResult).reason;
-            throw new Error(`All SOS actions failed. First error: ${firstError.message || firstError}`);
-        }
-
+        // DEMO-SAFE FALLBACK: Even if Twilio fails, return 200 OK 
+        // so the frontend can still trigger the local siren and UI alerts.
         return NextResponse.json({
             success: true,
-            message: `Initiated ${successfulActions.length} SOS actions successfully. ${failedActions.length} failed (likely due to trial account unverified numbers).`,
-            failures: failedActions.length
+            message: `SOS UI Triggered locally.`,
+            twilioStatus: successfulActions.length > 0 ? "Sent" : "Failed (Demo Mode)",
+            details: failedActions.length > 0 ? (failedActions[0] as PromiseRejectedResult).reason.message : null
         });
 
     } catch (error: any) {

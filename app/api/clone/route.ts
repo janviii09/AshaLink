@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     const response = await fetch('https://api.elevenlabs.io/v1/voices/add', {
       method: 'POST',
       headers: {
-        'xi-api-key': "sk_86c5f03cc259a199ebed40087e50806015582b63997eab40", // Use process.env in production!
+        'xi-api-key': process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY || '',
       },
       body: elevenLabsFormData,
     });
